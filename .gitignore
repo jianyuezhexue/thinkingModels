@@ -1,0 +1,46 @@
+# 授权配置文件（包含敏感信息）
+authorization.md
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 生产环境构文件
+dist/
+build/
+
+# 本地环境文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 日志文件
+*.log
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 上传文件（后续根据实际情况配置）
+uploads/
+
+# 测试覆盖率
+coverage/
+
+# 依赖锁定文件（根据团队约定是否保留）
+# package-lock.json
+# yarn.lock
