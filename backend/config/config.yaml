@@ -2,7 +2,7 @@ env: test
 host: 127.0.0.1
 port: 2500 
 mysql:
-   dbSource: "root:buildingblocks@tcp(8.155.47.77:3306)/building?charset=utf8mb4&parseTime=True&loc=Local&timeout=1000ms"
+   dbSource: "root:buildingblocks@tcp(8.155.47.77:3306)/thinkingModels?charset=utf8mb4&parseTime=True&loc=Local&timeout=1000ms"
 redis:
   address: "redis:6379"
   password: ""

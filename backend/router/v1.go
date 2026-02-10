@@ -2,6 +2,7 @@ package router
 
 import (
 	"thinkingModels/api/master"
+	"thinkingModels/api/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,22 @@ func AuthorizedRouters() {
 		superDictionaryGroup.DELETE("", superDictionaryApi.Del)
 		superDictionaryGroup.GET("/tree", superDictionaryApi.Tree)
 		superDictionaryGroup.POST("/children", superDictionaryApi.Children)
+
+		// 用户管理
+		userApi := user.NewUser()
+		userGroup := v1.Group("/user")
+		userGroup.POST("", userApi.Create)
+		userGroup.PUT("", userApi.Update)
+		userGroup.POST("/:id", userApi.Get)
+		userGroup.POST("/list", userApi.List)
+		userGroup.DELETE("", userApi.Del)
+
+		// 认证相关（非鉴权）
+		authApi := user.NewAuthController()
+		authGroup := v1.Group("/auth")
+		authGroup.POST("/login", authApi.Login)
+		authGroup.POST("/logout", authApi.Logout)
+		authGroup.POST("/refresh", authApi.Refresh)
 	}
 	Routers = append(Routers, authorizedRouters)
 }
