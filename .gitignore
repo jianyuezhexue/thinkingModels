@@ -44,3 +44,5 @@ coverage/
 # 依赖锁定文件（根据团队约定是否保留）
 # package-lock.json
 # yarn.lock
+.DS_Store
+.DS_Store

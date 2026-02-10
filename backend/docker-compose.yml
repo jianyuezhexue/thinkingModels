@@ -1,0 +1,7 @@
+# version: '3'
+services:
+  building_block:
+    build: .
+    ports:
+      - "2400:2400"
+    restart: always

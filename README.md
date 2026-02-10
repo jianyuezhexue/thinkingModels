@@ -4,11 +4,6 @@ Welcome to the Thinking Models project! This is a collection for gathering, orga
 
 ## Project Structure
 
-- `docs/` - Documentation and theoretical explanations
-- `src/` - Model implementation code
-- `examples/` - Usage examples
-- `tests/` - Test cases
-
 ## Goals
 
 This project aims to:
