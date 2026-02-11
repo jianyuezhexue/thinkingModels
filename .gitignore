@@ -49,3 +49,4 @@ coverage/
 .DS_Store
 .DS_Store
 backend/__debug_bin*
+frontend/.pnpm-store/

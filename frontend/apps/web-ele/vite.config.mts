@@ -12,13 +12,7 @@ export default defineConfig(async () => {
         }),
       ],
       server: {
-        proxy: {
-          '/api': {
-            changeOrigin: true,
-            target: 'http://127.0.0.1:2500',
-            ws: true,
-          },
-        },
+        // 前端直接连接后端，不使用代理
       },
     },
   };

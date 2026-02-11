@@ -1,0 +1,29 @@
+# 开发环境 Dockerfile - 支持热重载
+FROM golang:1.24-alpine
+
+# 设置国内镜像加速
+RUN go env -w GOPROXY=https://goproxy.cn,direct && \
+    go env -w GOSUMDB=off
+
+# 安装基础工具
+RUN apk add --no-cache git curl bash wget
+
+WORKDIR /app
+
+# 先复制依赖文件并下载
+COPY go.mod go.sum ./
+RUN go mod download || true
+
+# 安装开发工具（Air 热重载）
+RUN go install github.com/air-verse/air@latest || \
+    (sleep 5 && go install github.com/air-verse/air@latest) || \
+    (echo "Air install failed, will retry at runtime" && true)
+
+# 复制项目代码
+COPY . .
+
+# 暴露端口
+EXPOSE 2500
+
+# 启动命令：如果 air 安装失败，直接用 go run
+CMD ["sh", "-c", "which air >/dev/null 2>&1 && air -c .air.toml || go run main.go"]

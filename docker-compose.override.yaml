@@ -1,0 +1,38 @@
+version: '3.8'
+
+# 开发环境覆盖配置 - 调试模式
+# 使用: ./start.sh debug  或  docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up
+
+services:
+  backend:
+    environment:
+      - ENV=development
+      - DEBUG=true
+    # 启用 Delve 调试模式
+    command: >
+      sh -c "
+        go install github.com/go-delve/delve/cmd/dlv@latest &&
+        dlv debug --headless --listen=:2345 --api-version=2 --accept-multiclient --continue
+      "
+    ports:
+      - "2500:2500"
+      - "2345:2345"  # Delve 远程调试端口
+    security_opt:
+      - "seccomp:unconfined"  # 调试器需要
+
+  frontend:
+    environment:
+      - VITE_DEBUG=true
+    # 完整的启动命令（包含依赖安装）
+    command: >
+      bash -c "
+        echo '=== 初始化前端开发环境 ===' &&
+        corepack enable &&
+        corepack prepare pnpm@10.28.2 --activate 2>/dev/null || true &&
+        npm config set registry https://registry.npmmirror.com &&
+        echo '=== 安装依赖（首次启动可能需要几分钟）===' &&
+        (npx pnpm install || npm install) &&
+        echo '=== 启动开发服务器 ===' &&
+        cd apps/web-ele &&
+        npx vite --host 0.0.0.0 --port 5777
+      "

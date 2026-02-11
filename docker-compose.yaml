@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # 后端服务 (Go + Gin)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: thinking-models-backend
+    restart: unless-stopped
+    environment:
+      - ENV=development
+      - HOST=0.0.0.0
+      - PORT=2500
+      - JWT_SECRET=your-secret-key-change-in-production
+      - TZ=Asia/Shanghai
+      - GOPROXY=https://goproxy.cn,direct
+      - GOSUMDB=off
+    ports:
+      - "2500:2500"
+    volumes:
+      - ./backend:/app
+      - go_mod_cache:/go/pkg/mod
+    working_dir: /app
+    networks:
+      - thinking-models-network
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:2500/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # 前端服务 (Vue3 + Vite)
+  frontend:
+    image: m.daocloud.io/docker.io/library/node:20-slim
+    container_name: thinking-models-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - VITE_PORT=5777
+      - VITE_GLOB_API_URL=http://localhost:2500
+      - TZ=Asia/Shanghai
+      - PNPM_HOME=/root/.local/share/pnpm
+      - PATH=/root/.local/share/pnpm:$PATH
+    ports:
+      - "5777:5777"
+    volumes:
+      - ./frontend:/app
+      - node_modules_cache:/app/node_modules
+      - pnpm_cache:/root/.local/share/pnpm
+      - pnpm_store_cache:/root/.pnpm-store
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== 初始化前端开发环境 ===' &&
+        # 启用 corepack 并安装 pnpm
+        corepack enable &&
+        corepack prepare pnpm@10.28.2 --activate || true &&
+        # 设置 npm 镜像
+        npm config set registry https://registry.npmmirror.com &&
+        echo '=== 安装依赖（首次启动可能需要几分钟）===' &&
+        # 使用 npx 运行 pnpm，避免 PATH 问题
+        npx pnpm install || npm install &&
+        echo '=== 启动开发服务器 ===' &&
+        cd apps/web-ele &&
+        npx vite --host 0.0.0.0 --port 5777
+      "
+    networks:
+      - thinking-models-network
+    stdin_open: true
+    tty: true
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  go_mod_cache:
+    driver: local
+  node_modules_cache:
+    driver: local
+  pnpm_cache:
+    driver: local
+  pnpm_store_cache:
+    driver: local
+
+networks:
+  thinking-models-network:
+    driver: bridge
