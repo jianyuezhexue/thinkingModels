@@ -10,10 +10,12 @@ func UserInfo() gin.HandlerFunc {
 		// 模拟从jwt中读出了用户信息
 		currUserId := "1"
 		currUserName := "buildBlock"
+		currRoleIds := "1" // 角色ID，1表示管理员
 
 		// 预埋到上下文
 		c.Set("currUserId", currUserId)
 		c.Set("currUserName", currUserName)
+		c.Set("currRoleIds", currRoleIds)
 
 		// 继续执行后续的中间件或者处理器函数
 		c.Next()

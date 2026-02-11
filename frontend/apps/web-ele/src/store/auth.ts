@@ -29,24 +29,22 @@ export const useAuthStore = defineStore('auth', () => {
     params: Recordable<any>,
     onSuccess?: () => Promise<void> | void,
   ) {
-    // 异步处理用户登录操作并获取 accessToken
+    // 异步处理用户登录操作并获取 accessToken 和用户信息
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const loginResult = await loginApi(params);
 
       // 如果成功获取到 accessToken
-      if (accessToken) {
+      if (loginResult.accessToken) {
         // 将 accessToken 存储到 accessStore 中
-        accessStore.setAccessToken(accessToken);
+        accessStore.setAccessToken(loginResult.accessToken);
 
-        // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          getAccessCodesApi(),
-        ]);
+        // 从登录响应中获取用户信息，不再调用额外接口
+        userInfo = loginResult.userInfo as unknown as UserInfo;
 
-        userInfo = fetchUserInfoResult;
+        // 获取权限码
+        const accessCodes = await getAccessCodesApi();
 
         userStore.setUserInfo(userInfo);
         accessStore.setAccessCodes(accessCodes);

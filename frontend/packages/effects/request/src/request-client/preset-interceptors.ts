@@ -130,32 +130,37 @@ export const errorMessageResponseInterceptor = (
         return Promise.reject(error);
       }
 
-      let errorMessage = '';
-      const status = error?.response?.status;
+      // 优先使用后端返回的 msg 或 message 字段
+      const responseData = error?.response?.data;
+      let errorMessage = responseData?.msg || responseData?.message || '';
 
-      switch (status) {
-        case 400: {
-          errorMessage = $t('ui.fallback.http.badRequest');
-          break;
-        }
-        case 401: {
-          errorMessage = $t('ui.fallback.http.unauthorized');
-          break;
-        }
-        case 403: {
-          errorMessage = $t('ui.fallback.http.forbidden');
-          break;
-        }
-        case 404: {
-          errorMessage = $t('ui.fallback.http.notFound');
-          break;
-        }
-        case 408: {
-          errorMessage = $t('ui.fallback.http.requestTimeout');
-          break;
-        }
-        default: {
-          errorMessage = $t('ui.fallback.http.internalServerError');
+      // 如果没有 msg/message 字段，根据 HTTP status code 显示默认错误
+      if (!errorMessage) {
+        const status = error?.response?.status;
+        switch (status) {
+          case 400: {
+            errorMessage = $t('ui.fallback.http.badRequest');
+            break;
+          }
+          case 401: {
+            errorMessage = $t('ui.fallback.http.unauthorized');
+            break;
+          }
+          case 403: {
+            errorMessage = $t('ui.fallback.http.forbidden');
+            break;
+          }
+          case 404: {
+            errorMessage = $t('ui.fallback.http.notFound');
+            break;
+          }
+          case 408: {
+            errorMessage = $t('ui.fallback.http.requestTimeout');
+            break;
+          }
+          default: {
+            errorMessage = $t('ui.fallback.http.internalServerError');
+          }
         }
       }
       makeErrorMessage?.(errorMessage, error);

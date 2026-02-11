@@ -47,7 +47,18 @@ func (l *UserLogic) Create(req *user.RegisterRequest) (*user.UserInfo, error) {
 		return nil, err
 	}
 
-	return res.ToUserInfo(), nil
+	// 返回用户信息DTO（直接构造，脱敏处理）
+	return &user.UserInfo{
+		ID:            res.Id,
+		Username:      res.Username,
+		Nickname:      res.Nickname,
+		Email:         res.Email,
+		Phone:         res.Phone,
+		Avatar:        res.Avatar,
+		Status:        res.Status,
+		LastLoginTime: res.LastLoginTime.String(),
+		CreatedAt:     res.CreatedAt.String(),
+	}, nil
 }
 
 // Update 更新用户信息
@@ -79,7 +90,18 @@ func (l *UserLogic) Update(req *user.UpdateUserRequest) (*user.UserInfo, error) 
 		return nil, err
 	}
 
-	return res.ToUserInfo(), nil
+	// 返回用户信息DTO（直接构造，脱敏处理）
+	return &user.UserInfo{
+		ID:            res.Id,
+		Username:      res.Username,
+		Nickname:      res.Nickname,
+		Email:         res.Email,
+		Phone:         res.Phone,
+		Avatar:        res.Avatar,
+		Status:        res.Status,
+		LastLoginTime: res.LastLoginTime.String(),
+		CreatedAt:     res.CreatedAt.String(),
+	}, nil
 }
 
 // Get 查询用户详情
@@ -93,7 +115,18 @@ func (l *UserLogic) Get(id uint64) (*user.UserInfo, error) {
 		return nil, err
 	}
 
-	return res.ToUserInfo(), nil
+	// 返回用户信息DTO（直接构造，脱敏处理）
+	return &user.UserInfo{
+		ID:            res.Id,
+		Username:      res.Username,
+		Nickname:      res.Nickname,
+		Email:         res.Email,
+		Phone:         res.Phone,
+		Avatar:        res.Avatar,
+		Status:        res.Status,
+		LastLoginTime: res.LastLoginTime.String(),
+		CreatedAt:     res.CreatedAt.String(),
+	}, nil
 }
 
 // List 查询用户列表
@@ -116,10 +149,20 @@ func (l *UserLogic) List(req *user.SearchUser) (*user.ListUserResponse, error) {
 		return nil, err
 	}
 
-	// 转换为DTO列表
+	// 转换为DTO列表（直接构造，脱敏处理）
 	userInfoList := make([]*user.UserInfo, 0, len(list))
 	for _, item := range list {
-		userInfoList = append(userInfoList, item.ToUserInfo())
+		userInfoList = append(userInfoList, &user.UserInfo{
+			ID:            item.Id,
+			Username:      item.Username,
+			Nickname:      item.Nickname,
+			Email:         item.Email,
+			Phone:         item.Phone,
+			Avatar:        item.Avatar,
+			Status:        item.Status,
+			LastLoginTime: item.LastLoginTime.String(),
+			CreatedAt:     item.CreatedAt.String(),
+		})
 	}
 
 	// 返回数据
@@ -179,7 +222,17 @@ func (l *UserLogic) Login(req *user.LoginRequest) (*user.LoginResponse, error) {
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    tokenPair.ExpiresIn,
-		UserInfo:     *dbUser.ToUserInfo(), // 实体方法：转换为脱敏DTO
+		UserInfo: user.UserInfo{ // 直接构造，脱敏处理
+			ID:            dbUser.Id,
+			Username:      dbUser.Username,
+			Nickname:      dbUser.Nickname,
+			Email:         dbUser.Email,
+			Phone:         dbUser.Phone,
+			Avatar:        dbUser.Avatar,
+			Status:        dbUser.Status,
+			LastLoginTime: dbUser.LastLoginTime.String(),
+			CreatedAt:     dbUser.CreatedAt.String(),
+		},
 	}, nil
 }
 

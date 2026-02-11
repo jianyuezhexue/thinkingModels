@@ -7,9 +7,25 @@ export namespace AuthApi {
     username?: string;
   }
 
+  /** 用户信息 */
+  export interface UserInfo {
+    id: number;
+    username: string;
+    nickname: string;
+    email: string;
+    phone: string;
+    avatar: string;
+    status: number;
+    lastLoginTime: string;
+    createdAt: string;
+  }
+
   /** 登录接口返回值 */
   export interface LoginResult {
     accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    userInfo: UserInfo;
   }
 
   export interface RefreshTokenResult {

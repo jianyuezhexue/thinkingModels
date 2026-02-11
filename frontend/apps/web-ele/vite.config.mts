@@ -15,7 +15,6 @@ export default defineConfig(async () => {
         proxy: {
           '/api': {
             changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/api/, ''),
             // 后端API代理目标地址
             target: 'http://127.0.0.1:2500',
             ws: true,

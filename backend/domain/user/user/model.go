@@ -41,7 +41,6 @@ type UserEntityInterface interface {
 	HashPassword() error
 	GenerateToken() (*TokenPair, error)
 	UpdateLoginInfo(ip string)
-	ToUserInfo() *UserInfo
 }
 
 // UserEntity 用户实体
@@ -91,9 +90,10 @@ func (m *UserEntity) Repair() error {
 	return nil
 }
 
-// Complete 数据完善
+// Complete 数据完善（在实体内部完成数据补充、脱敏等面向对象操作）
 func (m *UserEntity) Complete() error {
-	// more...
+	// 数据完善逻辑：如设置默认值、计算字段、数据脱敏准备等
+	// 所有需要在展示前完成的数据补充工作都在这里处理
 	return nil
 }
 
@@ -164,21 +164,6 @@ func (u *UserEntity) GenerateToken() (*TokenPair, error) {
 func (u *UserEntity) UpdateLoginInfo(ip string) {
 	u.LastLoginTime = db.LocalTime(time.Now())
 	u.LastLoginIP = ip
-}
-
-// ToUserInfo 转换为脱敏的用户信息DTO
-func (u *UserEntity) ToUserInfo() *UserInfo {
-	return &UserInfo{
-		ID:            u.Id,
-		Username:      u.Username,
-		Nickname:      u.Nickname,
-		Email:         u.Email,
-		Phone:         u.Phone,
-		Avatar:        u.Avatar,
-		Status:        u.Status,
-		LastLoginTime: u.LastLoginTime.String(),
-		CreatedAt:     u.CreatedAt.String(),
-	}
 }
 
 // generateUniqueID 生成唯一ID

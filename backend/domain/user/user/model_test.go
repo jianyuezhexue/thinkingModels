@@ -104,12 +104,23 @@ func TestUserEntity_Create(t *testing.T) {
 	t.Log("User creation logic test passed (without database write)")
 }
 
-// TestUserEntity_ToUserInfo 测试转换为UserInfo
+// TestUserEntity_ToUserInfo 测试转换为UserInfo（直接构造DTO）
 func TestUserEntity_ToUserInfo(t *testing.T) {
 	// 初始化数据库
 	db.InitDb()
 
-	userInfo := testUserData.ToUserInfo()
+	// 直接构造DTO（模拟logic层做法）
+	userInfo := &UserInfo{
+		ID:            testUserData.Id,
+		Username:      testUserData.Username,
+		Nickname:      testUserData.Nickname,
+		Email:         testUserData.Email,
+		Phone:         testUserData.Phone,
+		Avatar:        testUserData.Avatar,
+		Status:        testUserData.Status,
+		LastLoginTime: testUserData.LastLoginTime.String(),
+		CreatedAt:     testUserData.CreatedAt.String(),
+	}
 
 	if userInfo.Username != testUserData.Username {
 		t.Errorf("Username mismatch: expected %s, got %s", testUserData.Username, userInfo.Username)
@@ -377,4 +388,71 @@ func createTestContextWithUser() *gin.Context {
 	ctx.Set("currUserName", "buildBlock")
 
 	return ctx
+}
+
+// TestInsertVbenUser 插入前端测试账号 vben/123456
+func TestInsertVbenUser(t *testing.T) {
+	// 初始化数据库
+	db.InitDb()
+
+	// 先检查用户是否已存在
+	var existingUser UserEntity
+	result := db.InitDb().Where("username = ?", "vben").First(&existingUser)
+	if result.Error == nil {
+		t.Logf("User 'vben' already exists with ID: %d", existingUser.Id)
+		return
+	}
+
+	// 创建带用户信息的测试上下文
+	ctx := createTestContextWithUser()
+
+	// 使用NewUserEntity创建实体
+	userInterface := NewUserEntity(ctx)
+	if userInterface == nil {
+		t.Fatal("NewUserEntity returned nil")
+	}
+
+	// 类型断言获取底层实体
+	userEntity, ok := userInterface.(*UserEntity)
+	if !ok {
+		t.Fatal("Failed to cast UserEntityInterface to *UserEntity")
+	}
+
+	// 设置前端测试账号数据
+	userEntity.Username = "vben"
+	userEntity.Password = "123456"
+	userEntity.Nickname = "Vben Admin"
+	userEntity.Email = "vben@example.com"
+	userEntity.Phone = "13800138000"
+	userEntity.Status = 1
+	userEntity.EnterpriseID = 1
+	userEntity.RoleIds = "1,2,3"
+
+	// 加密密码
+	err := userEntity.HashPassword()
+	if err != nil {
+		t.Fatalf("HashPassword failed: %v", err)
+	}
+
+	// 插入数据库
+	createdUser, err := userInterface.Create()
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	t.Logf("Successfully inserted vben user: ID=%d, Username=%s", createdUser.Id, createdUser.Username)
+
+	// 验证插入成功并验证密码
+	var foundUser UserEntity
+	queryResult := db.InitDb().Where("username = ?", "vben").First(&foundUser)
+	if queryResult.Error != nil {
+		t.Fatalf("Query inserted user failed: %v", queryResult.Error)
+	}
+
+	// 验证密码加密正确
+	if !foundUser.VerifyPassword("123456") {
+		t.Error("VerifyPassword should return true for password '123456'")
+	}
+
+	t.Log("Vben user test passed - can now login with username: vben, password: 123456")
 }

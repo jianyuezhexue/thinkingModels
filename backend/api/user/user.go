@@ -1,6 +1,9 @@
 package user
 
 import (
+	"errors"
+	"strconv"
+
 	"github.com/gin-gonic/gin"
 	"thinkingModels/api"
 	userDomain "thinkingModels/domain/user/user"
@@ -116,4 +119,137 @@ func (a User) Del(ctx *gin.Context) {
 
 	// 接口返回
 	a.Success(res, "删除成功")
+}
+
+// Info 获取当前登录用户信息
+func (a User) Info(ctx *gin.Context) {
+	// 设置上下文（重要：必须在调用其他方法前设置）
+	a.Ctx = ctx
+
+	// 从上下文获取当前用户ID（由JWT中间件设置）
+	userIDStr, exists := ctx.Get("currUserId")
+	if !exists {
+		a.Error(errors.New("未登录或token无效"))
+		return
+	}
+
+	// 将字符串ID转换为uint64
+	userID, err := strconv.ParseUint(userIDStr.(string), 10, 64)
+	if err != nil {
+		a.Error(errors.New("用户ID格式无效"))
+		return
+	}
+
+	// 实例化逻辑层
+	logic := user.NewUserLogic(ctx)
+	res, err := logic.Get(userID)
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	// 接口返回
+	a.Success(res, "获取成功")
+}
+
+// Login 用户登录
+func (a User) Login(ctx *gin.Context) {
+	req := &userDomain.LoginRequest{}
+	err := a.Bind(ctx, req)
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	logic := user.NewUserLogic(ctx)
+	res, err := logic.Login(req)
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	// 返回前端期望的格式
+	a.Success(res, "登录成功")
+}
+
+// Logout 用户登出
+func (a User) Logout(ctx *gin.Context) {
+	// 设置上下文
+	a.Ctx = ctx
+
+	// 从请求头获取Token
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader == "" {
+		a.Success(nil, "登出成功")
+		return
+	}
+
+	// 提取 token（Bearer token）
+	// 格式: Bearer <token>
+	token := ""
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	} else {
+		token = authHeader
+	}
+
+	// TODO: 将Token加入Redis黑名单，设置过期时间为token剩余有效期
+	// 这里暂时直接返回成功，实际业务中需要：
+	// 1. 解析token获取过期时间
+	// 2. 将token加入redis黑名单，key为 blacklisted_token:<token>
+	// 3. 设置过期时间为 token 剩余有效期
+	_ = token
+
+	a.Success(nil, "登出成功")
+}
+
+// Refresh 刷新Token
+func (a User) Refresh(ctx *gin.Context) {
+	// TODO: 实现Token刷新逻辑
+	a.Success(nil, "Token刷新成功")
+}
+
+// Codes 获取用户权限码列表
+func (a User) Codes(ctx *gin.Context) {
+	// 设置上下文
+	a.Ctx = ctx
+
+	// 从上下文获取当前用户角色信息
+	roleIds, exists := ctx.Get("currRoleIds")
+	if !exists {
+		// 如果没有角色信息，返回空数组
+		a.Success([]string{}, "获取成功")
+		return
+	}
+
+	// 根据角色ID解析权限码
+	// 这里可以根据实际业务从数据库查询权限码
+	// 简单实现：默认返回一些常用权限码
+	codes := []string{
+		"ACCOUNT",
+		"ACCOUNT_ADD",
+		"ACCOUNT_EDIT",
+		"ACCOUNT_DELETE",
+		"ACCOUNT_VIEW",
+		"ROLE",
+		"ROLE_ADD",
+		"ROLE_EDIT",
+		"ROLE_DELETE",
+		"ROLE_VIEW",
+		"DICT",
+		"DICT_ADD",
+		"DICT_EDIT",
+		"DICT_DELETE",
+		"DICT_VIEW",
+	}
+
+	// 如果有特定角色，可以添加更多权限码
+	if roleIdsStr, ok := roleIds.(string); ok && roleIdsStr != "" {
+		// 管理员角色拥有所有权限
+		if roleIdsStr == "1" || roleIdsStr == "admin" {
+			codes = append(codes, "ADMIN", "SYSTEM", "SYSTEM_SETTING")
+		}
+	}
+
+	a.Success(codes, "获取成功")
 }
