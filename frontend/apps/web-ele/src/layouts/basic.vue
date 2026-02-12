@@ -176,7 +176,7 @@ watch(
         :avatar
         :menus
         :text="userStore.userInfo?.realName"
-        description="ann.vben@gmail.com"
+        :description="userStore.userInfo?.email || '未设置邮箱'"
         tag-text="Pro"
         @logout="handleLogout"
       />

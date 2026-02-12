@@ -11,5 +11,86 @@
     "title": "概览",
     "analytics": "分析页",
     "workspace": "工作台"
+  },
+  "models": {
+    "menuTitle": "思维模型",
+    "market": "模型市场",
+    "detail": "模型详情",
+    "title": "思维模型市场",
+    "subtitle": "发现、学习、应用各种强大的思维模型，提升你的思考深度和决策质量",
+    "searchPlaceholder": "搜索思维模型、标签、作者...",
+    "results": "共 {count} 个模型",
+    "sort": {
+      "label": "排序",
+      "popular": "最受欢迎",
+      "newest": "最新发布",
+      "mostAdopted": "最多采纳",
+      "mostLiked": "最多点赞"
+    },
+    "category": {
+      "all": "全部",
+      "business": "商业管理",
+      "strategy": "战略规划",
+      "innovation": "创新思维",
+      "analysis": "分析工具",
+      "decision": "决策方法",
+      "creative": "创意构思"
+    },
+    "badge": {
+      "free": "免费"
+    },
+    "stats": {
+      "totalModels": "{count} 个模型",
+      "totalAuthors": "{count} 位作者",
+      "totalAdoptions": "{count} 次采纳",
+      "adoption": "采纳",
+      "practice": "练习",
+      "discussion": "讨论",
+      "fork": "引用",
+      "like": "点赞"
+    },
+    "action": {
+      "load": "加载到我的模型",
+      "purchase": "立即购买",
+      "fork": "引用创建副本"
+    },
+    "empty": {
+      "title": "未找到相关模型",
+      "description": "尝试使用不同的关键词或筛选条件"
+    },
+    "list": {
+      "swot": {
+        "title": "SWOT 分析模型",
+        "description": "系统分析优势、劣势、机会与威胁的经典战略框架"
+      },
+      "pdca": {
+        "title": "PDCA 循环",
+        "description": "计划-执行-检查-行动的持续改进方法论"
+      },
+      "firstPrinciples": {
+        "title": "第一性原理思维",
+        "description": "像马斯克一样回归本质，打破常规的创新思考方式"
+      },
+      "5w1h": {
+        "title": "5W1H 分析模型",
+        "description": "六个基本问题全面剖析，确保思考无遗漏"
+      },
+      "decisionMatrix": {
+        "title": "决策矩阵",
+        "description": "多维度量化评估，让复杂决策变得简单清晰"
+      },
+      "sixHats": {
+        "title": "六顶思考帽",
+        "description": "德博诺的经典创意工具，全方位激发团队创造力"
+      },
+      "okr": {
+        "title": "OKR 目标管理",
+        "description": "谷歌都在用的目标与关键成果管理法"
+      },
+      "abcde": {
+        "title": "ABCDE 优先级法",
+        "description": "艾森豪威尔矩阵升级版，高效管理时间和任务"
+      }
+    }
   }
 }

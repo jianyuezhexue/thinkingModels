@@ -43,6 +43,11 @@ export const useAuthStore = defineStore('auth', () => {
         // 从登录响应中获取用户信息，不再调用额外接口
         userInfo = loginResult.userInfo as unknown as UserInfo;
 
+        // 将 nickname 映射到 realName（布局组件使用 realName 显示）
+        if (userInfo && userInfo.nickname) {
+          userInfo.realName = userInfo.nickname;
+        }
+
         // 获取权限码
         const accessCodes = await getAccessCodesApi();
 
@@ -99,6 +104,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function fetchUserInfo() {
     let userInfo: null | UserInfo = null;
     userInfo = await getUserInfoApi();
+    // 将 nickname 映射到 realName（布局组件使用 realName 显示）
+    if (userInfo && userInfo.nickname) {
+      userInfo.realName = userInfo.nickname;
+    }
     userStore.setUserInfo(userInfo);
     return userInfo;
   }

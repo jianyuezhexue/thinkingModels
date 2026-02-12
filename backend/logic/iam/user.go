@@ -1,10 +1,10 @@
-package user
+package iam
 
 import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
-	"thinkingModels/domain/user/user"
+	"thinkingModels/domain/iam/user"
 	"thinkingModels/logic"
 )
 

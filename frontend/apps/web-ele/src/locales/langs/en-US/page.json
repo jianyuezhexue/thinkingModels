@@ -11,5 +11,85 @@
     "title": "Dashboard",
     "analytics": "Analytics",
     "workspace": "Workspace"
+  },
+  "models": {
+    "menuTitle": "Thinking Models",
+    "market": "Model Market",
+    "title": "Thinking Model Marketplace",
+    "subtitle": "Discover, learn, and apply powerful thinking models to enhance your depth of thinking and decision quality",
+    "searchPlaceholder": "Search models, tags, authors...",
+    "results": "{count} models found",
+    "sort": {
+      "label": "Sort by",
+      "popular": "Most Popular",
+      "newest": "Newest",
+      "mostAdopted": "Most Adopted",
+      "mostLiked": "Most Liked"
+    },
+    "category": {
+      "all": "All",
+      "business": "Business",
+      "strategy": "Strategy",
+      "innovation": "Innovation",
+      "analysis": "Analysis",
+      "decision": "Decision",
+      "creative": "Creative"
+    },
+    "badge": {
+      "free": "Free"
+    },
+    "stats": {
+      "totalModels": "{count} Models",
+      "totalAuthors": "{count} Authors",
+      "totalAdoptions": "{count} Adoptions",
+      "adoption": "Adoptions",
+      "practice": "Practices",
+      "discussion": "Discussions",
+      "fork": "Forks",
+      "like": "Likes"
+    },
+    "action": {
+      "load": "Add to My Models",
+      "purchase": "Buy Now",
+      "fork": "Fork Model"
+    },
+    "empty": {
+      "title": "No models found",
+      "description": "Try different keywords or filters"
+    },
+    "list": {
+      "swot": {
+        "title": "SWOT Analysis",
+        "description": "Classic strategic framework for analyzing Strengths, Weaknesses, Opportunities, and Threats"
+      },
+      "pdca": {
+        "title": "PDCA Cycle",
+        "description": "Plan-Do-Check-Act methodology for continuous improvement"
+      },
+      "firstPrinciples": {
+        "title": "First Principles Thinking",
+        "description": "Break down problems to their fundamental truths and build up from there"
+      },
+      "5w1h": {
+        "title": "5W1H Analysis",
+        "description": "Six fundamental questions to ensure comprehensive analysis"
+      },
+      "decisionMatrix": {
+        "title": "Decision Matrix",
+        "description": "Multi-dimensional evaluation tool for complex decisions"
+      },
+      "sixHats": {
+        "title": "Six Thinking Hats",
+        "description": "De Bono's creativity tool for comprehensive team thinking"
+      },
+      "okr": {
+        "title": "OKR Framework",
+        "description": "Objectives and Key Results management used by Google"
+      },
+      "abcde": {
+        "title": "ABCDE Method",
+        "description": "Priority matrix for efficient time and task management"
+      }
+    }
   }
 }

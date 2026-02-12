@@ -1,8 +1,8 @@
 package router
 
 import (
+	"thinkingModels/api/iam"
 	"thinkingModels/api/master"
-	"thinkingModels/api/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,9 +24,9 @@ func AuthorizedRouters() {
 		superDictionaryGroup.POST("/children", superDictionaryApi.Children)
 
 		// 用户管理
-		userApi := user.NewUser()
+		userApi := iam.NewUser()
 		userGroup := api.Group("/user")
-		userGroup.GET("/info", userApi.Info)      // 获取当前登录用户信息
+		userGroup.GET("/info", userApi.Info) // 获取当前登录用户信息
 		userGroup.POST("", userApi.Create)
 		userGroup.PUT("", userApi.Update)
 		userGroup.POST("/:id", userApi.Get)
@@ -49,7 +49,7 @@ func UnAuthorizedRouters() {
 		api := router.Group("")
 
 		// 用户注册（无需鉴权）
-		userApi := user.NewUser()
+		userApi := iam.NewUser()
 		api.POST("/auth/register", userApi.Create)
 	}
 	Routers = append(Routers, unAuthorizedRouters)

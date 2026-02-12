@@ -86,11 +86,19 @@ export function useTabbar() {
   };
 
   function wrapperTabLocale(tab: RouteLocationNormalizedGeneric) {
+    const title = tab?.meta?.title;
+    // 只有当 title 存在时才进行翻译
+    // 如果 title 不是有效的国际化 key(如已被翻译的文本或 undefined),$t 会返回 key 本身或报错
+    // 这里添加安全检查: 确保 title 是字符串且不为空
+    const translatedTitle =
+      typeof title === 'string' && title.trim()
+        ? $t(title, {}, { missingWarn: false, fallbackWarn: false })
+        : title;
     return {
       ...tab,
       meta: {
         ...tab?.meta,
-        title: $t(tab?.meta?.title as string),
+        title: translatedTitle,
       },
     };
   }

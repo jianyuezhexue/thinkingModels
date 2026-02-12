@@ -12,6 +12,7 @@ export namespace AuthApi {
     id: number;
     username: string;
     nickname: string;
+    realName: string; // 与 nickname 保持一致，用于布局展示
     email: string;
     phone: string;
     avatar: string;

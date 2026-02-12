@@ -1,4 +1,4 @@
-package user
+package iam
 
 import (
 	"errors"
@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"thinkingModels/api"
-	userDomain "thinkingModels/domain/user/user"
-	"thinkingModels/logic/user"
+	"thinkingModels/domain/iam/user"
+	"thinkingModels/logic/iam"
 )
 
 type User struct {
@@ -21,7 +21,7 @@ func NewUser() *User {
 // Create 创建用户（注册）
 func (a User) Create(ctx *gin.Context) {
 	// 参数校验
-	req := &userDomain.RegisterRequest{}
+	req := &user.RegisterRequest{}
 	err := a.Bind(ctx, req)
 	if err != nil {
 		a.Error(err)
@@ -29,7 +29,7 @@ func (a User) Create(ctx *gin.Context) {
 	}
 
 	// 实例化逻辑层
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.Create(req)
 	if err != nil {
 		a.Error(err)
@@ -43,7 +43,7 @@ func (a User) Create(ctx *gin.Context) {
 // Update 更新用户信息
 func (a User) Update(ctx *gin.Context) {
 	// 参数校验
-	req := &userDomain.UpdateUserRequest{}
+	req := &user.UpdateUserRequest{}
 	err := a.Bind(ctx, req)
 	if err != nil {
 		a.Error(err)
@@ -51,7 +51,7 @@ func (a User) Update(ctx *gin.Context) {
 	}
 
 	// 实例化逻辑层
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.Update(req)
 	if err != nil {
 		a.Error(err)
@@ -67,7 +67,7 @@ func (a User) Get(ctx *gin.Context) {
 	// TODO: 从路径参数获取id
 	// idStr := ctx.Param("id")
 	// 实例化逻辑层
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.Get(0) // TODO: 使用实际的id
 	if err != nil {
 		a.Error(err)
@@ -81,7 +81,7 @@ func (a User) Get(ctx *gin.Context) {
 // List 查询用户列表
 func (a User) List(ctx *gin.Context) {
 	// 参数校验
-	req := &userDomain.SearchUser{}
+	req := &user.SearchUser{}
 	err := a.Bind(ctx, req)
 	if err != nil {
 		a.Error(err)
@@ -89,7 +89,7 @@ func (a User) List(ctx *gin.Context) {
 	}
 
 	// 实例化逻辑层
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.List(req)
 	if err != nil {
 		a.Error(err)
@@ -102,7 +102,7 @@ func (a User) List(ctx *gin.Context) {
 
 // Del 删除用户
 func (a User) Del(ctx *gin.Context) {
-	req := &userDomain.DelUser{}
+	req := &user.DelUser{}
 	err := a.Bind(ctx, req)
 	if err != nil {
 		a.Error(err)
@@ -110,7 +110,7 @@ func (a User) Del(ctx *gin.Context) {
 	}
 
 	// 实例化逻辑层
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.Del(req.Ids)
 	if err != nil {
 		a.Error(err)
@@ -141,7 +141,7 @@ func (a User) Info(ctx *gin.Context) {
 	}
 
 	// 实例化逻辑层
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.Get(userID)
 	if err != nil {
 		a.Error(err)
@@ -154,14 +154,14 @@ func (a User) Info(ctx *gin.Context) {
 
 // Login 用户登录
 func (a User) Login(ctx *gin.Context) {
-	req := &userDomain.LoginRequest{}
+	req := &user.LoginRequest{}
 	err := a.Bind(ctx, req)
 	if err != nil {
 		a.Error(err)
 		return
 	}
 
-	logic := user.NewUserLogic(ctx)
+	logic := iam.NewUserLogic(ctx)
 	res, err := logic.Login(req)
 	if err != nil {
 		a.Error(err)

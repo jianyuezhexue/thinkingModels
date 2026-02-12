@@ -50,3 +50,4 @@ coverage/
 .DS_Store
 backend/__debug_bin*
 frontend/.pnpm-store/
+.claude/ui-ux-pro-max-skill-main/
