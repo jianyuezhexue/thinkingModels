@@ -3,9 +3,10 @@ package engine
 import (
 	"fmt"
 
-	"github.com/gin-gonic/gin"
 	"thinkingModels/config"
 	"thinkingModels/router"
+
+	"github.com/gin-gonic/gin"
 )
 
 // 启动服务
@@ -31,10 +32,6 @@ func Run() {
 
 	// 启动定时脚本
 
-	// 启动服务 - 端口从配置文件读取，默认为 2400
-	port := config.Config.Port
-	if port == "" {
-		port = "2400"
-	}
-	r.Run(fmt.Sprintf("%s:%s", config.Config.Host, port))
+	// 2500端口
+	r.Run(fmt.Sprintf("%s:%s", config.Config.Host, config.Config.Port))
 }

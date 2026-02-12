@@ -13,6 +13,22 @@ import { defineStore } from 'pinia';
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
 import { $t } from '#/locales';
 
+/**
+ * 将后端用户信息转换为框架期望的格式
+ */
+function convertToUserInfo(backendUser: any): UserInfo {
+  return {
+    userId: String(backendUser.id),
+    username: backendUser.username,
+    realName: backendUser.nickname || backendUser.username,
+    avatar: backendUser.avatar || '',
+    roles: [], // 后端不返回角色，从 accessCodes 获取
+    homePath: preferences.app.defaultHomePath,
+    desc: '',
+    token: '',
+  };
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
   const userStore = useUserStore();
@@ -40,13 +56,8 @@ export const useAuthStore = defineStore('auth', () => {
         // 将 accessToken 存储到 accessStore 中
         accessStore.setAccessToken(loginResult.accessToken);
 
-        // 从登录响应中获取用户信息，不再调用额外接口
-        userInfo = loginResult.userInfo as unknown as UserInfo;
-
-        // 将 nickname 映射到 realName（布局组件使用 realName 显示）
-        if (userInfo && userInfo.nickname) {
-          userInfo.realName = userInfo.nickname;
-        }
+        // 从登录响应中获取用户信息并转换格式
+        userInfo = convertToUserInfo(loginResult.userInfo);
 
         // 获取权限码
         const accessCodes = await getAccessCodesApi();
@@ -102,12 +113,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUserInfo() {
-    let userInfo: null | UserInfo = null;
-    userInfo = await getUserInfoApi();
-    // 将 nickname 映射到 realName（布局组件使用 realName 显示）
-    if (userInfo && userInfo.nickname) {
-      userInfo.realName = userInfo.nickname;
-    }
+    const backendUser = await getUserInfoApi();
+    const userInfo = convertToUserInfo(backendUser);
     userStore.setUserInfo(userInfo);
     return userInfo;
   }

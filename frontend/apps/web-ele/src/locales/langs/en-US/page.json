@@ -12,6 +12,57 @@
     "analytics": "Analytics",
     "workspace": "Workspace"
   },
+  "market": {
+    "menuTitle": "Model Market",
+    "title": "Thinking Model Marketplace",
+    "detail": "Model Detail",
+    "search": "Search thinking models...",
+    "allCategories": "All Categories",
+    "free": "Free",
+    "paid": "Paid",
+    "adopt": "Add to My Models",
+    "purchase": "Purchase Now",
+    "fork": "Fork Model",
+    "like": "Like"
+  },
+  "subject": {
+    "menuTitle": "My Topics",
+    "title": "My Topics",
+    "create": "Create Topic",
+    "detail": "Topic Detail",
+    "edit": "Edit Topic",
+    "delete": "Delete Topic",
+    "placeholder": {
+      "title": "Give your topic a name",
+      "description": "Describe the background, goals, and constraints..."
+    },
+    "steps": {
+      "basic": "Basic Info",
+      "detail": "Description",
+      "confirm": "Confirm"
+    },
+    "selectModel": "Select Model",
+    "startAnalysis": "Start Analysis",
+    "analysisHistory": "Analysis History",
+    "analysisInput": "Your Input",
+    "analysisResult": "Analysis Result",
+    "analyzing": "Analyzing...",
+    "analysisFailed": "Analysis Failed",
+    "analysisPending": "Pending"
+  },
+  "admin": {
+    "menuTitle": "Admin",
+    "models": "Model Management",
+    "categories": "Category Management",
+    "users": "User Management",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirmDelete": "Confirm Delete",
+    "deleteWarning": "Are you sure? This action cannot be undone."
+  },
   "models": {
     "menuTitle": "Thinking Models",
     "market": "Model Market",
