@@ -29,7 +29,7 @@ frontend/
 │       │   ├── views/        # Page views
 │       │   │   ├── market/   # Market module pages
 │       │   │   ├── subject/  # Subject module pages
-│       │   │   ├── my-models/# My models pages
+│       │   │   ├── myModels/ # My models pages (camelCase folder)
 │       │   │   └── _core/    # Core pages (login, errors)
 │       │   ├── router/       # Router configuration
 │       │   │   └── routes/
@@ -57,7 +57,9 @@ frontend/
 | Composables | `camelCase.ts` | `useModelList.ts` |
 | Utils | `camelCase.ts` | `formatDate.ts` |
 | APIs | `camelCase.ts` | `model.ts` |
-| Routes | `kebab-case.ts` | `my-models.ts` |
+| Routes | `camelCase.ts` | `myModels.ts` |
+
+> **Note:** Route files use camelCase (e.g., `myModels.ts`, `myTopics.ts`) to maintain consistency with Vue/JavaScript naming conventions.
 
 ### Code
 
@@ -73,7 +75,17 @@ frontend/
 
 ## Vue Component Structure
 
+**File Order:** `<template>` → `<script>` → `<style>`
+
 ```vue
+<template>
+  <Page title="Page Title" description="Page description">
+    <ElCard>
+      <!-- Content -->
+    </ElCard>
+  </Page>
+</template>
+
 <script lang="ts" setup>
 // 1. Imports (grouped: Vue, 3rd-party, local)
 import { computed, onMounted, ref, watch } from 'vue';
@@ -123,18 +135,12 @@ onMounted(() => {
 });
 </script>
 
-<template>
-  <Page title="Page Title" description="Page description">
-    <ElCard>
-      <!-- Content -->
-    </ElCard>
-  </Page>
-</template>
-
 <style scoped>
 /* Component-specific styles */
 </style>
 ```
+
+> **Important:** Always place `<template>` at the top of the file, followed by `<script>`, then `<style>`. This improves readability by showing the UI structure first.
 
 ## API Layer Standards
 
@@ -191,7 +197,7 @@ export * from './subject/topic';
 ### Module Routes (Auto-loaded)
 
 ```typescript
-// router/routes/modules/my-models.ts
+// router/routes/modules/myModels.ts
 import type { RouteRecordRaw } from 'vue-router';
 import { $t } from '#/locales';
 
@@ -204,13 +210,13 @@ const routes: RouteRecordRaw[] = [
     },
     name: 'MyModels',
     path: '/my-models',
-    component: () => import('#/views/my-models/index.vue'),
+    component: () => import('#/views/myModels/index.vue'),
   },
   // Hidden child routes
   {
     name: 'MyModelDetail',
     path: '/my-models/:id',
-    component: () => import('#/views/my-models/detail/index.vue'),
+    component: () => import('#/views/myModels/detail/index.vue'),
     meta: {
       hideInMenu: true,
       title: $t('page.models.detail'),
