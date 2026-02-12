@@ -79,7 +79,7 @@ func AuthorizedRouters() {
 		topicGroup := api.Group("/subject/topic")
 		// 注意：具体路由必须放在参数路由（/:id）之前
 		topicGroup.GET("/list", topicApi.List)
-		topicGroup.GET("/my-list", topicApi.ListByUser)
+		topicGroup.GET("/my", topicApi.ListByUser)
 		topicGroup.POST("/status", topicApi.UpdateStatus)
 		topicGroup.POST("/select-model", topicApi.SelectModel)
 		topicGroup.POST("/remove-model/:id", topicApi.RemoveModel)
@@ -98,7 +98,7 @@ func AuthorizedRouters() {
 		// 注意：具体路由必须放在参数路由（/:id）之前
 		analysisGroup.POST("/save-with-ai", analysisApi.SaveWithAi)
 		analysisGroup.GET("/list", analysisApi.List)
-		analysisGroup.GET("/my-list", analysisApi.ListByUser)
+		analysisGroup.GET("/my", analysisApi.ListByUser)
 		analysisGroup.GET("/current", analysisApi.GetCurrent)
 		analysisGroup.GET("/latest", analysisApi.GetLatest)
 		analysisGroup.GET("/by-topic/:topicId", analysisApi.ListByTopic)

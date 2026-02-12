@@ -66,6 +66,8 @@
   "models": {
     "menuTitle": "Thinking Models",
     "market": "Model Market",
+    "myModels": "My Models",
+    "create": "Create Model",
     "title": "Thinking Model Marketplace",
     "subtitle": "Discover, learn, and apply powerful thinking models to enhance your depth of thinking and decision quality",
     "searchPlaceholder": "Search models, tags, authors...",

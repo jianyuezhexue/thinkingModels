@@ -66,6 +66,8 @@
   "models": {
     "menuTitle": "思维模型",
     "market": "模型市场",
+    "myModels": "我的模型",
+    "create": "创建模型",
     "detail": "模型详情",
     "title": "思维模型市场",
     "subtitle": "发现、学习、应用各种强大的思维模型，提升你的思考深度和决策质量",

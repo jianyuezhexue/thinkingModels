@@ -46,6 +46,59 @@ const relatedModels = ref<ModelApi.ThinkingModel[]>([]);
 // 当前激活的Tab
 const activeTab = ref('guide');
 
+// 练习记录（模拟数据）
+const practiceRecords = ref([
+  {
+    id: 'p1',
+    user: { id: 'u20', name: '王思维', avatar: 'https://avatar.vercel.sh/wangsw.svg?text=WS', isCertified: true },
+    topicTitle: '如何用SWOT分析评估新产品上线风险',
+    summary: '通过SWOT分析框架，我系统评估了我们团队新开发的AI助手产品的市场前景。优势在于技术领先，劣势是品牌知名度不足，机会是市场需求增长，威胁是巨头竞争激烈...',
+    createdAt: '2024-02-18 15:30',
+    views: 1256,
+    likes: 89,
+    comments: 23,
+    isExcellent: true,
+  },
+  {
+    id: 'p2',
+    user: { id: 'u21', name: '李策划', avatar: 'https://avatar.vercel.sh/lich.svg?text=LC', isCertified: false },
+    topicTitle: 'SWOT分析在创业计划书中的应用',
+    summary: '在准备融资计划书时，使用SWOT分析帮助投资人快速理解我们的商业模式。将内部资源能力与外部环境结合分析，让融资路演更有说服力...',
+    createdAt: '2024-02-16 09:15',
+    views: 892,
+    likes: 56,
+    comments: 12,
+    isExcellent: true,
+  },
+  {
+    id: 'p3',
+    user: { id: 'u22', name: '张产品', avatar: '', isCertified: true },
+    topicTitle: '产品迭代中的SWOT实战案例',
+    summary: '分享一个真实案例：我们在做产品迭代决策时，通过SWOT分析发现了被忽视的技术债务风险，及时调整了优先级，避免了后期大规模重构...',
+    createdAt: '2024-02-14 16:45',
+    views: 2341,
+    likes: 178,
+    comments: 45,
+    isExcellent: false,
+  },
+  {
+    id: 'p4',
+    user: { id: 'u23', name: '陈决策', avatar: 'https://avatar.vercel.sh/chenjc.svg?text=CJ', isCertified: false },
+    topicTitle: '个人职业发展的SWOT分析',
+    summary: '用SWOT分析自己的职业发展路径，识别了需要提升的技能和可以把握的行业机会。这种方法不仅适用于企业，对个人规划也很有帮助...',
+    createdAt: '2024-02-12 11:20',
+    views: 567,
+    likes: 34,
+    comments: 8,
+    isExcellent: false,
+  },
+]);
+
+// 查看练习详情
+function viewPracticeDetail(id: string) {
+  router.push(`/practices/${id}`);
+}
+
 // 评论相关（模拟数据）
 const newComment = ref('');
 const comments = ref([
@@ -179,6 +232,16 @@ function goBack() {
 function goToCreateTopic() {
   router.push('/my-topics/create');
 }
+
+// 格式化 Markdown 内容为 HTML
+const formattedContent = computed(() => {
+  if (!model.value?.content) return '';
+  return model.value.content
+    .replace(/\n/g, '<br>')
+    .replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
+    .replace(/### (.*)/g, '<h3 class="text-lg font-semibold mt-4 mb-2">$1</h3>')
+    .replace(/\d\. \*\*(.*)\*\*/g, '<strong>$1</strong>');
+});
 </script>
 
 <template>
@@ -212,7 +275,11 @@ function goToCreateTopic() {
         <!-- 封面和基本信息 -->
         <ElCard shadow="never">
           <div class="relative h-64 w-full overflow-hidden rounded-lg">
-            <img :src="model.cover" class="h-full w-full object-cover" />
+            <img
+              :src="model.cover || '/images/default-model-cover.svg'"
+              class="h-full w-full object-cover"
+              @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-model-cover.svg'; }"
+            />
             <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
             <div class="absolute bottom-4 left-4 right-4">
               <div class="flex items-center gap-2">
@@ -234,7 +301,11 @@ function goToCreateTopic() {
 
             <div class="mt-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <ElAvatar :size="48" :src="model.author.avatar" />
+                <ElAvatar
+                  :size="48"
+                  :src="model.author.avatar || '/images/default-avatar.svg'"
+                  @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-avatar.svg'; }"
+                />
                 <div>
                   <div class="font-medium">{{ model.author.name }}</div>
                   <div class="text-sm text-gray-500">{{ model.author.bio || '资深思维模型专家' }}</div>
@@ -292,7 +363,7 @@ function goToCreateTopic() {
                 <div
                   v-if="model.content"
                   class="text-gray-700 leading-relaxed"
-                  v-html="model.content.replace(/\n/g, '<br>').replace(/## (.*)/g, '<h2 class=\"text-xl font-bold mt-6 mb-3\">$1</h2>').replace(/### (.*)/g, '<h3 class=\"text-lg font-semibold mt-4 mb-2\">$1</h3>').replace(/\d\. \*\*(.*)\*\*/g, '<strong>$1</strong>')"
+                  v-html="formattedContent"
                 ></div>
                 <div v-else class="text-gray-500">
                   <h2 class="text-xl font-bold mt-6 mb-3">什么是{{ model.title }}？</h2>
@@ -345,7 +416,11 @@ function goToCreateTopic() {
                     class="rounded-lg border border-gray-100 p-4"
                   >
                     <div class="flex items-start gap-3">
-                      <ElAvatar :size="40" :src="comment.author.avatar" />
+                      <ElAvatar
+                        :size="40"
+                        :src="comment.author.avatar || '/images/default-avatar.svg'"
+                        @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-avatar.svg'; }"
+                      />
                       <div class="flex-1">
                         <div class="flex items-center gap-2 mb-1">
                           <span class="font-medium">{{ comment.author.name }}</span>
@@ -361,6 +436,93 @@ function goToCreateTopic() {
                   </div>
                 </div>
                 <ElEmpty v-else description="暂无讨论，来发表第一条评论吧！" />
+              </div>
+            </ElTabPane>
+
+            <!-- 练习记录 Tab -->
+            <ElTabPane label="练习记录" name="practices">
+              <div class="space-y-6">
+                <!-- 练习统计 -->
+                <div class="grid grid-cols-3 gap-4">
+                  <div class="rounded-lg bg-purple-50 p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600">{{ formatNumber(model.stats.practices) }}</div>
+                    <div class="text-sm text-gray-600">总练习次数</div>
+                  </div>
+                  <div class="rounded-lg bg-blue-50 p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600">{{ practiceRecords.length }}</div>
+                    <div class="text-sm text-gray-600">公开练习</div>
+                  </div>
+                  <div class="rounded-lg bg-green-50 p-4 text-center">
+                    <div class="text-2xl font-bold text-green-600">{{ practiceRecords.filter(p => p.isExcellent).length }}</div>
+                    <div class="text-sm text-gray-600">优秀练习</div>
+                  </div>
+                </div>
+
+                <!-- 练习列表 -->
+                <div v-if="practiceRecords.length > 0" class="space-y-4">
+                  <div
+                    v-for="record in practiceRecords"
+                    :key="record.id"
+                    class="rounded-lg border border-gray-100 p-4 transition-all hover:border-purple-200 hover:shadow-sm"
+                  >
+                    <div class="flex items-start gap-4">
+                      <ElAvatar
+                        :size="48"
+                        :src="record.user.avatar || '/images/default-avatar.svg'"
+                        @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-avatar.svg'; }"
+                      />
+                      <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center gap-2">
+                            <span class="font-medium">{{ record.user.name }}</span>
+                            <ElTag v-if="record.isExcellent" type="success" size="small">优秀</ElTag>
+                            <ElTag v-if="record.user.isCertified" type="warning" size="small">认证用户</ElTag>
+                          </div>
+                          <span class="text-xs text-gray-400">{{ record.createdAt }}</span>
+                        </div>
+
+                        <div class="mt-2">
+                          <h4 class="font-medium text-gray-900">{{ record.topicTitle }}</h4>
+                          <p class="mt-1 line-clamp-3 text-sm text-gray-600">{{ record.summary }}</p>
+                        </div>
+
+                        <div class="mt-3 flex items-center gap-4 text-xs text-gray-500">
+                          <span class="flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                            {{ formatNumber(record.views) }} 浏览
+                          </span>
+                          <span class="flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                            {{ formatNumber(record.likes) }} 点赞
+                          </span>
+                          <span class="flex items-center gap-1">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                            </svg>
+                            {{ formatNumber(record.comments) }} 评论
+                          </span>
+                        </div>
+
+                        <div class="mt-3">
+                          <ElButton link type="primary" size="small" @click="viewPracticeDetail(record.id)">
+                            查看详情 →
+                          </ElButton>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <ElEmpty v-else description="暂无练习记录，成为第一个练习者吧！">
+                  <template #extra>
+                    <ElButton type="primary" @click="goToCreateTopic">开始练习</ElButton>
+                  </template>
+                </ElEmpty>
               </div>
             </ElTabPane>
 
@@ -509,5 +671,12 @@ function goToCreateTopic() {
 
 .prose p {
   margin-bottom: 1rem;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

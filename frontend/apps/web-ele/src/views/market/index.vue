@@ -272,7 +272,11 @@ const displayPages = computed(() => {
         >
           <!-- 封面图 -->
           <div class="relative h-40 overflow-hidden">
-            <img :src="model.cover" class="h-full w-full object-cover transition-transform group-hover:scale-105" />
+            <img
+              :src="model.cover || '/images/default-model-cover.svg'"
+              class="h-full w-full object-cover transition-transform group-hover:scale-105"
+              @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-model-cover.svg'; }"
+            />
             <span
               :class="[
                 'absolute left-2 top-2 rounded-full px-2 py-0.5 text-xs font-bold',
@@ -302,7 +306,11 @@ const displayPages = computed(() => {
 
             <!-- 作者 -->
             <div class="mt-3 flex items-center gap-2">
-              <img :src="model.author.avatar" class="h-5 w-5 rounded-full" />
+              <img
+                :src="model.author.avatar || '/images/default-avatar.svg'"
+                class="h-5 w-5 rounded-full"
+                @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-avatar.svg'; }"
+              />
               <span class="text-xs text-gray-600">{{ model.author.name }}</span>
             </div>
 
