@@ -12,6 +12,127 @@
     "analytics": "分析页",
     "workspace": "工作台"
   },
+  "collision": {
+    "title": "思维碰撞",
+    "detail": "话题详情",
+    "create": "发起讨论",
+    "subtitle": "分享你的灵感，碰撞思维火花，与志同道合的伙伴共同探索思维的边界",
+    "searchPlaceholder": "搜索话题、标签、作者...",
+    "categories": {
+      "all": "全部",
+      "inspiration": "灵感创意",
+      "methodology": "方法论",
+      "case": "案例分析",
+      "question": "问题讨论",
+      "share": "经验分享"
+    },
+    "sort": {
+      "latest": "最新发布",
+      "popular": "最受欢迎",
+      "mostCommented": "讨论最多",
+      "mostLiked": "点赞最多"
+    },
+    "stats": {
+      "views": "浏览",
+      "likes": "点赞",
+      "comments": "评论",
+      "favorites": "收藏"
+    },
+    "action": {
+      "newTopic": "发起新话题",
+      "like": "点赞",
+      "comment": "评论",
+      "share": "分享",
+      "favorite": "收藏"
+    },
+    "form": {
+      "title": "话题标题",
+      "titlePlaceholder": "用一句话概括你的想法",
+      "content": "话题内容",
+      "contentPlaceholder": "详细描述你的想法、问题或见解...",
+      "category": "选择分类",
+      "tags": "添加标签",
+      "tagsPlaceholder": "输入标签后按回车添加",
+      "relatedModel": "关联思维模型",
+      "relatedModelPlaceholder": "选择一个相关的思维模型（可选）",
+      "submit": "发布话题",
+      "saveDraft": "保存草稿"
+    },
+    "comment": {
+      "placeholder": "写下你的想法...",
+      "reply": "回复",
+      "replyTo": "回复 @{name}",
+      "submit": "发表评论",
+      "loadMore": "加载更多评论",
+      "noComments": "还没有评论，来发表第一条吧"
+    },
+    "empty": {
+      "title": "还没有话题",
+      "description": "成为第一个发起讨论的人吧"
+    },
+    "badge": {
+      "top": "置顶",
+      "featured": "精选",
+      "hot": "热门"
+    },
+    "meetup": {
+      "title": "找人聊聊",
+      "createTitle": "发起约见",
+      "detail": "约见详情",
+      "subtitle": "发布话题，邀约志同道合的人线下交流",
+      "topics": {
+        "all": "全部主题",
+        "career": "职业发展",
+        "startup": "创业交流",
+        "technology": "技术探讨",
+        "investment": "投资理财",
+        "life": "生活感悟",
+        "other": "其他话题"
+      },
+      "costSplit": {
+        "host": "我请客",
+        "aa": "AA制",
+        "guest": "你请客"
+      },
+      "status": {
+        "open": "招募中",
+        "pending": "待确认",
+        "confirmed": "已确认",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      }
+    },
+    "consultation": {
+      "title": "付费咨询",
+      "createTitle": "发布咨询",
+      "detail": "咨询详情",
+      "subtitle": "发布问题悬赏，获得专家一对一指导",
+      "fields": {
+        "all": "全部领域",
+        "career": "职业发展",
+        "startup": "创业指导",
+        "technology": "技术架构",
+        "product": "产品设计",
+        "investment": "投资理财",
+        "management": "团队管理",
+        "psychology": "心理咨询",
+        "other": "其他"
+      },
+      "mode": {
+        "online": "线上咨询",
+        "offline": "线下咨询",
+        "both": "都可以"
+      },
+      "status": {
+        "open": "征集中",
+        "matched": "已匹配",
+        "inProgress": "进行中",
+        "completed": "已完成",
+        "cancelled": "已取消",
+        "expired": "已过期"
+      }
+    }
+  },
   "market": {
     "menuTitle": "模型市场",
     "title": "思维模型市场",

@@ -12,6 +12,127 @@
     "analytics": "Analytics",
     "workspace": "Workspace"
   },
+  "collision": {
+    "title": "Mind Collision",
+    "detail": "Discussion Detail",
+    "create": "Start Discussion",
+    "subtitle": "Share your inspirations, spark mind collisions, and explore the boundaries of thinking with like-minded partners",
+    "searchPlaceholder": "Search topics, tags, authors...",
+    "categories": {
+      "all": "All",
+      "inspiration": "Inspiration",
+      "methodology": "Methodology",
+      "case": "Case Study",
+      "question": "Discussion",
+      "share": "Experience"
+    },
+    "sort": {
+      "latest": "Latest",
+      "popular": "Popular",
+      "mostCommented": "Most Commented",
+      "mostLiked": "Most Liked"
+    },
+    "stats": {
+      "views": "Views",
+      "likes": "Likes",
+      "comments": "Comments",
+      "favorites": "Favorites"
+    },
+    "action": {
+      "newTopic": "New Topic",
+      "like": "Like",
+      "comment": "Comment",
+      "share": "Share",
+      "favorite": "Favorite"
+    },
+    "form": {
+      "title": "Topic Title",
+      "titlePlaceholder": "Summarize your idea in one sentence",
+      "content": "Topic Content",
+      "contentPlaceholder": "Describe your idea, question, or insight in detail...",
+      "category": "Select Category",
+      "tags": "Add Tags",
+      "tagsPlaceholder": "Press Enter to add tags",
+      "relatedModel": "Related Model",
+      "relatedModelPlaceholder": "Select a related thinking model (optional)",
+      "submit": "Publish",
+      "saveDraft": "Save Draft"
+    },
+    "comment": {
+      "placeholder": "Write your thoughts...",
+      "reply": "Reply",
+      "replyTo": "Reply to @{name}",
+      "submit": "Post Comment",
+      "loadMore": "Load More",
+      "noComments": "No comments yet, be the first one"
+    },
+    "empty": {
+      "title": "No Topics Yet",
+      "description": "Be the first to start a discussion"
+    },
+    "badge": {
+      "top": "Pinned",
+      "featured": "Featured",
+      "hot": "Hot"
+    },
+    "meetup": {
+      "title": "Meet Up",
+      "createTitle": "Create Meetup",
+      "detail": "Meetup Detail",
+      "subtitle": "Post your topic, invite like-minded people for offline discussions",
+      "topics": {
+        "all": "All Topics",
+        "career": "Career",
+        "startup": "Startup",
+        "technology": "Technology",
+        "investment": "Investment",
+        "life": "Life",
+        "other": "Other"
+      },
+      "costSplit": {
+        "host": "My Treat",
+        "aa": "Split Bill",
+        "guest": "Your Treat"
+      },
+      "status": {
+        "open": "Open",
+        "pending": "Pending",
+        "confirmed": "Confirmed",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "consultation": {
+      "title": "Paid Consultation",
+      "createTitle": "Post Consultation",
+      "detail": "Consultation Detail",
+      "subtitle": "Post questions with rewards, get one-on-one expert guidance",
+      "fields": {
+        "all": "All Fields",
+        "career": "Career Development",
+        "startup": "Startup Guidance",
+        "technology": "Tech Architecture",
+        "product": "Product Design",
+        "investment": "Investment",
+        "management": "Team Management",
+        "psychology": "Psychology",
+        "other": "Other"
+      },
+      "mode": {
+        "online": "Online",
+        "offline": "Offline",
+        "both": "Both"
+      },
+      "status": {
+        "open": "Open",
+        "matched": "Matched",
+        "inProgress": "In Progress",
+        "completed": "Completed",
+        "cancelled": "Cancelled",
+        "expired": "Expired"
+      }
+    }
+  },
   "market": {
     "menuTitle": "Model Market",
     "title": "Thinking Model Marketplace",
