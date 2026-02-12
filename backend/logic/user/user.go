@@ -29,6 +29,11 @@ func (l *UserLogic) Create(req *user.RegisterRequest) (*user.UserInfo, error) {
 		return nil, err
 	}
 
+	// 设置用户状态为正常（默认启用）- 通过类型断言访问具体类型
+	if entity, ok := userEntity.(*user.UserEntity); ok {
+		entity.Status = 1
+	}
+
 	// 数据校验
 	err = userEntity.Validate()
 	if err != nil {

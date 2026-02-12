@@ -46,7 +46,11 @@ func AuthorizedRouters() {
 // 非鉴权路由
 func UnAuthorizedRouters() {
 	unAuthorizedRouters := func(router *gin.Engine) {
-		// 无公开路由
+		api := router.Group("")
+
+		// 用户注册（无需鉴权）
+		userApi := user.NewUser()
+		api.POST("/auth/register", userApi.Create)
 	}
 	Routers = append(Routers, unAuthorizedRouters)
 }
