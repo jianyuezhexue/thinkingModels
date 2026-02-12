@@ -11,13 +11,13 @@ const routes: RouteRecordRaw[] = [
     },
     name: 'MyModels',
     path: '/my-models',
-    component: () => import('#/views/my-models/index.vue'),
+    component: () => import('#/views/myModels/index.vue'),
   },
   // 模型详情/编辑页 - 隐藏菜单
   {
     name: 'MyModelDetail',
     path: '/my-models/:id',
-    component: () => import('#/views/my-models/detail/index.vue'),
+    component: () => import('#/views/myModels/detail/index.vue'),
     meta: {
       hideInMenu: true,
       keepAlive: true,
@@ -28,7 +28,7 @@ const routes: RouteRecordRaw[] = [
   {
     name: 'CreateModel',
     path: '/my-models/create',
-    component: () => import('#/views/my-models/create/index.vue'),
+    component: () => import('#/views/myModels/create/index.vue'),
     meta: {
       hideInMenu: true,
       title: $t('page.models.create'),
