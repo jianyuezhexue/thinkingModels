@@ -15,13 +15,17 @@ import {
   ElDialog,
   ElProgress,
 } from 'element-plus';
-import { getMyTopicsApi, type TopicApi } from '#/api';
+import { 
+  getMyThinkingTopicListApi, 
+  getThinkingTopicStatisticsApi,
+  type ThinkingTopicApi 
+} from '#/api';
 
 const router = useRouter();
 
 // ==================== 状态管理 ====================
 const loading = ref(false);
-const topics = ref<(TopicApi.Topic & { 
+const topics = ref<(ThinkingTopicApi.TopicInfo & { 
   recommendedActions?: string[];
   selectedModels?: string[];
   progress?: number;
@@ -34,52 +38,53 @@ const pageSize = ref(10);
 
 // 筛选
 const searchQuery = ref('');
-const activeStatus = ref<TopicApi.TopicStatus | 'all'>('all');
+const activeStatus = ref<ThinkingTopicApi.TopicStatus | 'all'>('all');
 const sortBy = ref<'latest' | 'updated' | 'analysis'>('latest');
 
 // 弹窗
 const actionDialogVisible = ref(false);
-const selectedTopic = ref<(TopicApi.Topic & { recommendedActions?: string[] }) | null>(null);
+const selectedTopic = ref<(ThinkingTopicApi.TopicInfo & { recommendedActions?: string[] }) | null>(null);
 const completedActionsMap = ref<Record<string, boolean>>({});
 
-// 统计数据
+// 统计数据 - 使用数字状态
 const stats = computed(() => {
   return {
     total: total.value,
-    inProgress: topics.value.filter(t => t.status === 'in_progress').length,
-    completed: topics.value.filter(t => t.status === 'completed').length,
-    draft: topics.value.filter(t => t.status === 'draft').length,
+    inProgress: topics.value.filter(t => t.status === 0).length, // 0=进行中
+    completed: topics.value.filter(t => t.status === 1).length,   // 1=已完成
+    draft: topics.value.filter(t => t.status === 3).length,       // 3=草稿
   };
 });
 
-// 状态选项
+// 状态选项 - 使用数字状态
 const statusTabs = [
-  { id: 'all', label: '全部课题', icon: '📋' },
-  { id: 'in_progress', label: '进行中', icon: '⏳' },
-  { id: 'completed', label: '已完成', icon: '✅' },
-  { id: 'draft', label: '草稿', icon: '📝' },
+  { id: 'all' as const, label: '全部课题', icon: '📋' },
+  { id: 0, label: '进行中', icon: '⏳' },
+  { id: 1, label: '已完成', icon: '✅' },
+  { id: 3, label: '草稿', icon: '📝' },
+  { id: 2, label: '已归档', icon: '📦' },
 ];
 
-// 模拟模型名称
+// 模型名称
 const modelNames = ['SWOT分析', '5W1H', 'MECE原则', '第一性原理', '金字塔原理', '逆向思维', '奥卡姆剃刀', '二阶思维'];
 
 // ==================== 数据获取 ====================
 async function fetchTopics() {
   loading.value = true;
   try {
-    const params: TopicApi.TopicListParams = {
+    const params: ThinkingTopicApi.TopicListParams = {
       page: currentPage.value,
       pageSize: pageSize.value,
-      keyword: searchQuery.value || undefined,
+      title: searchQuery.value || undefined,
     };
     if (activeStatus.value !== 'all') {
-      params.status = activeStatus.value;
+      params.status = activeStatus.value as ThinkingTopicApi.TopicStatus;
     }
 
-    const res = await getMyTopicsApi(params);
+    const res = await getMyThinkingTopicListApi(params);
     
     // 添加模拟数据
-    topics.value = res.list.map((topic: TopicApi.Topic, index: number) => ({
+    topics.value = res.list.map((topic: ThinkingTopicApi.TopicInfo, index: number) => ({
       ...topic,
       recommendedActions: index % 3 === 0 ? [
         '重新评估目标用户群体，缩小范围至核心用户',
@@ -88,7 +93,7 @@ async function fetchTopics() {
       ] : index % 3 === 1 ? [
         '整理现有数据，建立分析框架',
       ] : undefined,
-      selectedModels: modelNames.slice(index % 4, index % 4 + 1 + (index % 3)),
+      selectedModels: topic.modelName ? [topic.modelName] : modelNames.slice(index % 4, index % 4 + 1 + (index % 3)),
       progress: getProgressValue(topic.status),
     }));
     total.value = res.total;
@@ -101,42 +106,42 @@ async function fetchTopics() {
 }
 
 // ==================== 工具函数 ====================
-function getProgressValue(status: TopicApi.TopicStatus): number {
-  const map: Record<string, number> = {
-    draft: 15,
-    in_progress: 60,
-    completed: 100,
-    archived: 100,
+function getProgressValue(status: ThinkingTopicApi.TopicStatus): number {
+  const map: Record<number, number> = {
+    3: 15,   // 草稿
+    0: 60,   // 进行中
+    1: 100,  // 已完成
+    2: 100,  // 已归档
   };
   return map[status] || 0;
 }
 
-function getStatusStyle(status: TopicApi.TopicStatus): string {
-  const styles: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-600',
-    in_progress: 'bg-amber-100 text-amber-700',
-    completed: 'bg-green-100 text-green-700',
-    archived: 'bg-slate-100 text-slate-600',
+function getStatusStyle(status: ThinkingTopicApi.TopicStatus): string {
+  const styles: Record<number, string> = {
+    3: 'bg-gray-100 text-gray-600',      // 草稿
+    0: 'bg-amber-100 text-amber-700',    // 进行中
+    1: 'bg-green-100 text-green-700',    // 已完成
+    2: 'bg-slate-100 text-slate-600',    // 已归档
   };
   return styles[status] || 'bg-gray-100 text-gray-600';
 }
 
-function getStatusText(status: TopicApi.TopicStatus): string {
-  const texts: Record<string, string> = {
-    draft: '草稿',
-    in_progress: '进行中',
-    completed: '已完成',
-    archived: '已归档',
+function getStatusText(status: ThinkingTopicApi.TopicStatus): string {
+  const texts: Record<number, string> = {
+    3: '草稿',
+    0: '进行中',
+    1: '已完成',
+    2: '已归档',
   };
-  return texts[status] || status;
+  return texts[status] || '未知';
 }
 
-function getStatusIcon(status: TopicApi.TopicStatus): string {
-  const icons: Record<string, string> = {
-    draft: '📝',
-    in_progress: '⏳',
-    completed: '✅',
-    archived: '📦',
+function getStatusIcon(status: ThinkingTopicApi.TopicStatus): string {
+  const icons: Record<number, string> = {
+    3: '📝',
+    0: '⏳',
+    1: '✅',
+    2: '📦',
   };
   return icons[status] || '📋';
 }
@@ -169,20 +174,20 @@ function goToCreate() {
   router.push('/my-topics/create');
 }
 
-function goToDetail(topic: TopicApi.Topic) {
+function goToDetail(topic: ThinkingTopicApi.TopicInfo) {
   router.push('/my-topics/' + topic.id);
 }
 
-function startAnalysis(topic: TopicApi.Topic) {
+function startAnalysis(topic: ThinkingTopicApi.TopicInfo) {
   router.push('/my-topics/' + topic.id + '?tab=analysis');
 }
 
-function viewActions(topic: TopicApi.Topic & { recommendedActions?: string[] }) {
+function viewActions(topic: ThinkingTopicApi.TopicInfo & { recommendedActions?: string[] }) {
   selectedTopic.value = topic;
   actionDialogVisible.value = true;
 }
 
-function toggleAction(topicId: string, actionIndex: number) {
+function toggleAction(topicId: number, actionIndex: number) {
   const key = topicId + '-' + actionIndex;
   completedActionsMap.value[key] = !completedActionsMap.value[key];
 }
@@ -278,14 +283,14 @@ onMounted(() => {
             <div class="flex gap-2">
               <button
                 v-for="tab in statusTabs"
-                :key="tab.id"
+                :key="String(tab.id)"
                 class="px-4 py-2 rounded-full text-sm font-medium transition-all"
                 :class="[
                   activeStatus === tab.id
                     ? 'bg-purple-600 text-white shadow-md'
                     : 'bg-gray-100 text-gray-600 hover:bg-purple-100 hover:text-purple-600'
                 ]"
-                @click="activeStatus = tab.id as TopicApi.TopicStatus | 'all'"
+                @click="activeStatus = tab.id as ThinkingTopicApi.TopicStatus | 'all'"
               >
                 {{ tab.icon }} {{ tab.label }}
               </button>
@@ -347,7 +352,7 @@ onMounted(() => {
                   :percentage="topic.progress || 0"
                   :width="64"
                   :stroke-width="4"
-                  :color="topic.status === 'completed' ? '#10b981' : topic.status === 'in_progress' ? '#f59e0b' : '#9ca3af'"
+                  :color="topic.status === 1 ? '#10b981' : topic.status === 0 ? '#f59e0b' : '#9ca3af'"
                 >
                   <template #default>
                     <span class="text-lg">{{ getStatusIcon(topic.status) }}</span>
@@ -371,7 +376,7 @@ onMounted(() => {
                   </div>
                   <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <ElButton
-                      v-if="topic.status === 'draft'"
+                      v-if="topic.status === 3"
                       type="primary"
                       size="small"
                       class="!bg-purple-600 !border-purple-600 !rounded-full"

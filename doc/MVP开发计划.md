@@ -1,540 +1,653 @@
 # 思维模型平台 MVP 开发计划
 
-> 基于技术方案文档，聚焦 **thinking 领域（思维模型核心）** 的 MVP 功能开发
+> 本文档定义 AI 编程助手执行 thinking 领域 MVP 开发的任务清单、执行动作、规范和检查标准
 
 ---
 
-## 一、MVP 范围定义
+## 一、MVP 范围
 
-### 1.1 核心功能闭环
+### 1.1 实体清单
 
-```
-用户 → 浏览/采纳模型 → 创建课题 → 选用模型分析 → AI辅助分析 → 导出行动 → 跟踪执行
-```
-
-### 1.2 MVP 实体清单
-
-| 模块 | 实体 | 表名 | 开发状态 |
+| 序号 | 模块 | 表名 | 当前状态 |
 |------|------|------|----------|
-| 思维模型 | ModelEntity | thinking_models | 🟡 部分完成 |
-| 模型分类 | CategoryEntity | model_categories | 🟡 部分完成 |
-| 课题管理 | TopicEntity | topics | 🟡 部分完成 |
-| 分析记录 | AnalysisEntity | topic_analyses | 🟡 部分完成 |
-| 行动管理 | ActionEntity | actions | 🔴 待开发 |
-| 跟进记录 | FollowUpEntity | action_followups | 🔴 待开发 |
-| 模型标签 | TagEntity | model_tags | 🔴 待开发 |
+| 1 | 思维模型 | thinking_models | 待检查 |
+| 2 | 模型分类 | model_categories | 待检查 |
+| 3 | 模型标签 | model_tags | 待新建 |
+| 4 | 课题管理 | topics | 待检查 |
+| 5 | 分析记录 | topic_analyses | 待检查 |
+| 6 | 行动管理 | actions | 待新建 |
+| 7 | 跟进记录 | action_followups | 待新建 |
 
-### 1.3 MVP 不包含
+### 1.2 开发流程（每个模块）
 
-- 模型评论系统（model_comments）
-- 付费购买流程（订单/支付）
-- AI对话基础设施（ai领域）
-- 社群功能（community领域）
+```
+数据表检查 → 数据表调整/新建 → 后端代码实现 → 接口自测 → 前端联调
+```
 
 ---
 
-## 二、现有代码盘点
+## 二、通用规范
 
-### 2.1 已完成基础设施
+### 2.1 数据表规范
 
-| 模块 | 路径 | 状态 |
-|------|------|------|
-| 用户认证 | `domain/iam/user/` | ✅ 完成 |
-| 超级字典 | `domain/master/superDictionary/` | ✅ 完成 |
-| 数据库连接 | `component/db/` | ✅ 完成 |
-| Redis | `component/redis/` | ✅ 完成 |
-| 路由框架 | `router/` | ✅ 完成 |
-| 中间件 | `middleware/` | ✅ 完成 |
+**审计字段（必须包含）：**
+```sql
+created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT '删除时间',
+create_by BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建人ID',
+create_by_name VARCHAR(64) NOT NULL DEFAULT '' COMMENT '创建人姓名',
+update_by BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '更新人ID',
+update_by_name VARCHAR(64) NOT NULL DEFAULT '' COMMENT '更新人姓名'
+```
 
-### 2.2 thinking 领域现状
+**主键规范：**
+- 使用 `BIGINT UNSIGNED AUTO_INCREMENT`
+- 命名为 `id`
 
-需要检查的现有代码：
+**索引规范：**
+- 外键字段必须建索引
+- 常用查询字段建索引
+- 复合索引遵循最左前缀原则
 
+### 2.2 后端代码规范
+
+**目录结构：**
 ```
 backend/
-├── domain/
-│   ├── market/
-│   │   ├── model/        # 思维模型 → 迁移到 thinking/model
-│   │   └── category/     # 模型分类 → 迁移到 thinking/category
-│   └── subject/
-│       ├── topic/        # 课题管理 → 迁移到 thinking/topic
-│       └── analysis/     # 分析记录 → 迁移到 thinking/analysis
-├── api/
-│   ├── market/           # → 迁移到 thinking/
-│   └── subject/          # → 迁移到 thinking/
-└── logic/
-    ├── market/           # → 迁移到 thinking/
-    └── subject/          # → 迁移到 thinking/
+├── domain/thinking/{module}/
+│   └── model.go          # Entity定义 + 充血方法
+├── api/thinking/
+│   └── {module}.go       # API层，参数校验
+├── logic/thinking/
+│   └── {module}.go       # Logic层，业务编排
+└── router/v1.go          # 路由注册
+```
+
+**Entity 必须包含：**
+```go
+type Entity struct {
+    base.BaseModel[Entity]
+    // 业务字段...
+}
+
+func (e *Entity) TableName() string { return "表名" }
+func (e *Entity) Validate() error   // 数据校验
+func (e *Entity) Repair() error     // 数据修复
+```
+
+**API 层规范：**
+- 使用 `tool/resp` 统一响应格式
+- 参数使用 struct 定义，添加 binding tag
+- 调用 logic 层处理业务
+
+**Logic 层规范：**
+- 继承 `logic.BaseLogic`
+- 调用 domain 层方法
+- 处理事务和业务编排
+
+### 2.3 接口响应规范
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {}
+}
 ```
 
 ---
 
-## 三、开发步骤
+## 三、任务清单
 
-### 阶段一：代码结构重组（1天）
+---
 
-#### Step 1.1 创建 thinking 领域目录
+### 任务1：思维模型（thinking_models）
+
+#### 1.1 数据表检查
+
+**执行动作：**
+1. 读取 `backend/init.sql` 或数据库，获取 `thinking_models` 表结构
+2. 对比技术方案中的字段定义
+3. 输出差异清单
+
+**检查标准：**
+- [ ] 表名是否为 `thinking_models`
+- [ ] 是否包含7个审计字段
+- [ ] 字段类型是否与技术方案一致
+- [ ] 索引是否完整（category_id, author_id, status）
+
+**技术方案字段：**
+```
+id, name, code, description, cover_image, icon, category_id, 
+price, content, overview, difficulty, estimated_time,
+usage_count, adopt_count, like_count, comment_count,
+status, publish_time, version, author_id, author_name,
+is_official, source_model_id, + 7个审计字段
+```
+
+#### 1.2 数据表调整
+
+**执行动作：**
+1. 根据检查结果生成 ALTER TABLE 语句
+2. 执行 SQL 或更新 init.sql
+3. 确认表结构与技术方案一致
+
+**检查标准：**
+- [ ] 执行 `DESCRIBE thinking_models` 确认结构正确
+
+#### 1.3 后端代码实现
+
+**执行动作：**
+1. 检查/创建 `domain/thinking/model/model.go`
+   - Entity 结构体（字段与表一致）
+   - TableName() 方法
+   - Validate() 方法
+   - Repair() 方法
+   - Publish() / Unpublish() 方法
+   - IncrementUsageCount() 等统计方法
+
+2. 检查/创建 `api/thinking/model.go`
+   - Create / Update / Delete / Get / List
+   - GetMy（我的模型）
+   - Publish / Unpublish
+   - Fork（引用创建）
+
+3. 检查/创建 `logic/thinking/model.go`
+   - 对应 API 的业务逻辑
+
+4. 更新 `router/v1.go` 注册路由
+
+**检查标准：**
+- [ ] Entity 字段与数据表一致
+- [ ] 包含 Validate/Repair 方法
+- [ ] API 层参数校验完整
+- [ ] 路由已注册
+- [ ] 编译通过 `go build`
+
+#### 1.4 接口自测
+
+**执行动作：**
+1. 启动服务
+2. 使用 curl 测试各接口
+3. 验证响应格式和数据正确性
+
+**测试用例：**
+```bash
+# 创建模型
+curl -X POST localhost:8080/api/v1/thinking/model \
+  -H "Content-Type: application/json" \
+  -d '{"name":"测试模型","code":"test_model","category_id":1}'
+
+# 模型列表
+curl localhost:8080/api/v1/thinking/model/list
+
+# 模型详情
+curl localhost:8080/api/v1/thinking/model/1
+
+# 发布模型
+curl -X POST localhost:8080/api/v1/thinking/model/publish \
+  -d '{"id":1}'
+```
+
+**检查标准：**
+- [ ] 创建返回新记录ID
+- [ ] 列表返回分页数据
+- [ ] 详情返回完整字段
+- [ ] 发布后 status 变为已发布
+
+---
+
+### 任务2：模型分类（model_categories）
+
+#### 2.1 数据表检查
+
+**执行动作：**
+1. 获取 `model_categories` 表结构
+2. 对比技术方案字段
+
+**技术方案字段：**
+```
+id, parent_id, name, code, icon, description, 
+sort, level, path, status, model_count, + 7个审计字段
+```
+
+**检查标准：**
+- [ ] 包含父子关系字段（parent_id, level, path）
+- [ ] 包含7个审计字段
+- [ ] 索引：parent_id, status
+
+#### 2.2 数据表调整
+
+**执行动作：**
+1. 生成并执行 ALTER TABLE 语句
+
+#### 2.3 后端代码实现
+
+**执行动作：**
+1. `domain/thinking/category/model.go`
+   - Entity + BuildPath() + GetChildren() + UpdateModelCount()
+
+2. `api/thinking/category.go`
+   - Tree / Children / Create / Update / Delete / Move
+
+3. `logic/thinking/category.go`
+
+4. 路由注册
+
+**检查标准：**
+- [ ] Tree 接口返回树形结构
+- [ ] 移动分类后 path 自动更新
+
+#### 2.4 接口自测
 
 ```bash
-mkdir -p backend/domain/thinking/{model,category,topic,analysis,action,followup}
-mkdir -p backend/api/thinking
-mkdir -p backend/logic/thinking
-```
-
-#### Step 1.2 迁移现有代码
-
-| 源路径 | 目标路径 | 操作 |
-|--------|----------|------|
-| `domain/market/model/` | `domain/thinking/model/` | 移动并更新包名 |
-| `domain/market/category/` | `domain/thinking/category/` | 移动并更新包名 |
-| `domain/subject/topic/` | `domain/thinking/topic/` | 移动并更新包名 |
-| `domain/subject/analysis/` | `domain/thinking/analysis/` | 移动并更新包名 |
-| `api/market/` | `api/thinking/` | 移动并更新import |
-| `api/subject/` | `api/thinking/` | 移动并更新import |
-| `logic/market/` | `logic/thinking/` | 移动并更新import |
-| `logic/subject/` | `logic/thinking/` | 移动并更新import |
-
-#### Step 1.3 更新路由配置
-
-修改 `router/v1.go`：
-- `/market/model` → `/thinking/model`
-- `/market/category` → `/thinking/category`
-- `/subject/topic` → `/thinking/topic`
-- `/subject/analysis` → `/thinking/analysis`
-
-#### Step 1.4 清理旧目录
-
-删除空的 `domain/market/`、`domain/subject/`、`api/market/`、`api/subject/` 等目录
-
----
-
-### 阶段二：思维模型完善（2天）
-
-#### Step 2.1 检查 ModelEntity 完整性
-
-对照技术方案检查字段：
-
-```go
-// 需要确认的字段
-type Model struct {
-    // 基础信息
-    Name, Code, Description, CoverImage, Icon string
-    CategoryID uint64
-    // 定价
-    Price decimal.Decimal
-    // 内容
-    Content, Overview string
-    // 属性
-    Difficulty, EstimatedTime int
-    // 统计
-    UsageCount, AdoptCount, LikeCount, CommentCount int
-    // 状态
-    Status int  // 0草稿,1审核中,2已发布,3已下架,4审核拒绝
-    PublishTime *time.Time
-    Version string
-    // 作者
-    AuthorID uint64
-    AuthorName string
-    IsOfficial int
-    SourceModelID uint64
-}
-```
-
-#### Step 2.2 完善 ModelEntity 能力方法
-
-```go
-// 需要实现的充血模型方法
-func (e *Entity) Validate() error           // 数据校验
-func (e *Entity) Repair() error             // 数据修复
-func (e *Entity) Publish() error            // 发布模型
-func (e *Entity) Unpublish() error          // 下架模型
-func (e *Entity) IncrementUsageCount()      // 增加使用次数
-func (e *Entity) IncrementAdoptCount()      // 增加采纳次数
-func (e *Entity) CalculateStats() error     // 计算统计数据
-```
-
-#### Step 2.3 完善模型接口
-
-| 接口 | 方法 | 路径 | 状态 |
-|------|------|------|------|
-| 创建模型 | POST | /thinking/model | 检查 |
-| 更新模型 | PUT | /thinking/model | 检查 |
-| 模型详情 | GET | /thinking/model/:id | 检查 |
-| 模型列表 | GET | /thinking/model/list | 检查 |
-| 我的模型 | GET | /thinking/model/my | 检查 |
-| 删除模型 | DELETE | /thinking/model | 检查 |
-| 发布模型 | POST | /thinking/model/publish | 新增 |
-| 下架模型 | POST | /thinking/model/unpublish | 新增 |
-| 引用创建 | POST | /thinking/model/fork | 新增 |
-
----
-
-### 阶段三：模型标签系统（1天）
-
-#### Step 3.1 创建 TagEntity
-
-新建文件：`domain/thinking/tag/model.go`
-
-```go
-type Tag struct {
-    base.BaseModel[Tag]
-    Name string           // 标签名称
-    Code string           // 标签编码
-    Description string    // 标签描述
-    Color string          // 标签颜色（十六进制）
-    Sort int              // 排序
-    UseCount int          // 使用次数
-    Status int            // 0禁用,1启用
-}
-```
-
-#### Step 3.2 实现标签能力方法
-
-```go
-func (e *Entity) Validate() error
-func (e *Entity) IncrementUseCount()
-func (e *Entity) DecrementUseCount()
-```
-
-#### Step 3.3 创建标签接口
-
-新建文件：`api/thinking/tag.go`、`logic/thinking/tag.go`
-
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 创建标签 | POST | /thinking/tag |
-| 更新标签 | PUT | /thinking/tag |
-| 标签详情 | GET | /thinking/tag/:id |
-| 标签列表 | GET | /thinking/tag/list |
-| 删除标签 | DELETE | /thinking/tag/:id |
-| 热门标签 | GET | /thinking/tag/hot |
-
-#### Step 3.4 模型-标签关联
-
-在模型接口中支持标签操作：
-
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 给模型打标签 | POST | /thinking/model/tags |
-| 移除模型标签 | DELETE | /thinking/model/tags |
-| 按标签查模型 | GET | /thinking/model/by-tag/:tagId |
-
----
-
-### 阶段四：模型分类完善（1天）
-
-#### Step 3.1 检查 CategoryEntity 完整性
-
-```go
-type Category struct {
-    ParentID uint64
-    Name, Code, Icon, Description string
-    Sort, Level int
-    Path string
-    Status int
-    ModelCount int
-}
-```
-
-#### Step 3.2 完善分类能力方法
-
-```go
-func (e *Entity) BuildPath() string         // 构建路径
-func (e *Entity) GetChildren() []*Entity    // 获取子分类
-func (e *Entity) UpdateModelCount() error   // 更新模型数量
-func (e *Entity) Move(newParentID uint64)   // 移动分类
-```
-
-#### Step 3.3 完善分类接口
-
-| 接口 | 方法 | 路径 | 状态 |
-|------|------|------|------|
-| 分类树 | GET | /thinking/category/tree | 检查 |
-| 子分类 | GET | /thinking/category/children/:id | 新增 |
-| 移动分类 | POST | /thinking/category/move | 新增 |
-
----
-
-### 阶段五：课题管理完善（2天）
-
-#### Step 4.1 检查 TopicEntity 完整性
-
-```go
-type Topic struct {
-    Title, Description, Background, Goal, Constraints string
-    Status int  // 0草稿,1进行中,2已完成,3已归档
-    UserID uint64
-    ModelID uint64
-    ModelName string
-    Priority int
-    Tags string
-    AnalysisCount, ActionCount int
-    Deadline, CompleteTime *time.Time
-}
-```
-
-#### Step 4.2 完善课题能力方法
-
-```go
-func (e *Entity) Validate() error
-func (e *Entity) SelectModel(modelID uint64, modelName string) error
-func (e *Entity) RemoveModel() error
-func (e *Entity) UpdateStatus(status int) error
-func (e *Entity) Complete() error
-func (e *Entity) Archive() error
-func (e *Entity) IncrementAnalysisCount()
-func (e *Entity) IncrementActionCount()
-```
-
-#### Step 4.3 完善课题接口
-
-| 接口 | 方法 | 路径 | 状态 |
-|------|------|------|------|
-| 创建课题 | POST | /thinking/topic | 检查 |
-| 更新课题 | PUT | /thinking/topic | 检查 |
-| 课题详情 | GET | /thinking/topic/:id | 检查 |
-| 课题列表 | GET | /thinking/topic/list | 检查 |
-| 我的课题 | GET | /thinking/topic/my | 检查 |
-| 选用模型 | POST | /thinking/topic/select-model | 新增 |
-| 移除模型 | POST | /thinking/topic/remove-model/:id | 新增 |
-| 更新状态 | POST | /thinking/topic/status | 新增 |
-| 完成课题 | POST | /thinking/topic/complete | 新增 |
-| 归档课题 | POST | /thinking/topic/archive | 新增 |
-| 课题统计 | GET | /thinking/topic/statistics | 新增 |
-
----
-
-### 阶段六：分析记录完善（2天）
-
-#### Step 5.1 检查 AnalysisEntity 完整性
-
-```go
-type Analysis struct {
-    TopicID, ModelID uint64
-    ModelName string
-    Content string      // JSON格式用户填写内容
-    AiAnalysis string   // AI分析结果
-    AiSuggestions string
-    Version int
-    IsCurrent int       // 是否当前版本
-    UserID uint64
-    Status int          // 0分析中,1已完成,2失败
-}
-```
-
-#### Step 5.2 完善分析能力方法
-
-```go
-func (e *Entity) Validate() error
-func (e *Entity) SetAsCurrent() error
-func (e *Entity) IncrementVersion() int
-func (e *Entity) ParseContent() (map[string]interface{}, error)
-func (e *Entity) GenerateAiPrompt(model *ModelEntity) string
-func (e *Entity) SetAiResult(analysis, suggestions string) error
-```
-
-#### Step 5.3 完善分析接口
-
-| 接口 | 方法 | 路径 | 状态 |
-|------|------|------|------|
-| 创建分析 | POST | /thinking/analysis | 检查 |
-| AI分析 | POST | /thinking/analysis/save-with-ai | 新增（核心） |
-| 更新分析 | PUT | /thinking/analysis | 检查 |
-| 分析详情 | GET | /thinking/analysis/:id | 检查 |
-| 课题分析列表 | GET | /thinking/analysis/by-topic/:topicId | 新增 |
-| 当前版本 | GET | /thinking/analysis/current | 新增 |
-| 历史版本 | GET | /thinking/analysis/history/:topicId/:modelId | 新增 |
-| 设为当前 | POST | /thinking/analysis/set-current | 新增 |
-
----
-
-### 阶段七：行动管理开发（3天）
-
-#### Step 6.1 创建 ActionEntity
-
-新建文件：`domain/thinking/action/model.go`
-
-```go
-type Action struct {
-    base.BaseModel[Action]
-    Title, Description string
-    UserID, TopicID uint64
-    TopicTitle string
-    AnalysisID uint64
-    Priority int        // 1低,2中,3高
-    Status int          // 0待执行,1进行中,2已完成,3已取消
-    Progress int        // 0-100
-    Deadline, CompleteTime *time.Time
-    GuidePrinciple string
-    FollowupCount int
-}
-```
-
-#### Step 6.2 实现行动能力方法
-
-```go
-func (e *Entity) Validate() error
-func (e *Entity) UpdateProgress(progress int) error
-func (e *Entity) Complete() error
-func (e *Entity) Cancel() error
-func (e *Entity) SetGuidePrinciple(principle string)
-func (e *Entity) IncrementFollowupCount()
-func (e *Entity) CheckOverdue() bool
-```
-
-#### Step 6.3 创建行动接口
-
-新建文件：`api/thinking/action.go`、`logic/thinking/action.go`
-
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 创建行动 | POST | /thinking/action |
-| 从分析导出 | POST | /thinking/action/from-analysis |
-| 更新行动 | PUT | /thinking/action |
-| 行动详情 | GET | /thinking/action/:id |
-| 行动列表 | GET | /thinking/action/list |
-| 我的行动 | GET | /thinking/action/my |
-| 删除行动 | DELETE | /thinking/action |
-| 更新进度 | POST | /thinking/action/progress |
-| 完成行动 | POST | /thinking/action/complete |
-| 行动统计 | GET | /thinking/action/statistics |
-
----
-
-### 阶段八：跟进记录开发（1天）
-
-#### Step 7.1 创建 FollowUpEntity
-
-新建文件：`domain/thinking/followup/model.go`
-
-```go
-type FollowUp struct {
-    base.BaseModel[FollowUp]
-    ActionID, UserID uint64
-    Content string
-    ProgressBefore, ProgressAfter int
-}
-```
-
-#### Step 7.2 实现跟进能力方法
-
-```go
-func (e *Entity) Validate() error
-func (e *Entity) SetProgressChange(before, after int)
-```
-
-#### Step 7.3 创建跟进接口
-
-新建文件：`api/thinking/followup.go`、`logic/thinking/followup.go`
-
-| 接口 | 方法 | 路径 |
-|------|------|------|
-| 添加跟进 | POST | /thinking/followup |
-| 跟进详情 | GET | /thinking/followup/:id |
-| 行动跟进列表 | GET | /thinking/followup/by-action/:actionId |
-| 更新跟进 | PUT | /thinking/followup |
-| 删除跟进 | DELETE | /thinking/followup/:id |
-
----
-
-### 阶段九：数据库迁移（0.5天）
-
-#### Step 8.1 执行建表语句
-
-从技术方案中提取以下表的DDL并执行：
-
-- [x] `thinking_models` - 检查现有表结构是否一致
-- [x] `model_categories` - 检查现有表结构是否一致
-- [x] `topics` - 检查现有表结构是否一致
-- [x] `topic_analyses` - 检查现有表结构是否一致
-- [ ] `model_tags` - 新建
-- [ ] `actions` - 新建
-- [ ] `action_followups` - 新建
-
-#### Step 8.2 数据迁移（如需要）
-
-检查是否有测试数据需要迁移
-
----
-
-### 阶段十：集成测试（1天）
-
-#### Step 9.1 接口测试
-
-使用 Postman/curl 测试所有接口：
-
-1. **模型流程**：创建模型 → 发布 → 查询列表
-2. **课题流程**：创建课题 → 选用模型 → 创建分析 → AI分析
-3. **行动流程**：从分析导出行动 → 更新进度 → 添加跟进 → 完成
-
-#### Step 9.2 业务流程验收
-
-完整走通核心流程：
-```
-浏览模型市场 → 采纳模型 → 创建课题 → 选用模型分析 → 
-填写分析内容 → AI辅助分析 → 导出行动清单 → 
-更新行动进度 → 添加跟进记录 → 完成行动
+# 分类树
+curl localhost:8080/api/v1/thinking/category/tree
+
+# 子分类
+curl localhost:8080/api/v1/thinking/category/children/1
 ```
 
 ---
 
-## 四、开发时间估算
+### 任务3：模型标签（model_tags）
 
-| 阶段 | 内容 | 预估工时 |
-|------|------|----------|
-| 阶段一 | 代码结构重组 | 1天 |
-| 阶段二 | 思维模型完善 | 2天 |
-| 阶段三 | 模型标签系统 | 1天 |
-| 阶段四 | 模型分类完善 | 1天 |
-| 阶段五 | 课题管理完善 | 2天 |
-| 阶段六 | 分析记录完善 | 2天 |
-| 阶段七 | 行动管理开发 | 3天 |
-| 阶段八 | 跟进记录开发 | 1天 |
-| 阶段九 | 数据库迁移 | 0.5天 |
-| 阶段十 | 集成测试 | 1天 |
-| **合计** | | **14.5天** |
+#### 3.1 数据表新建
+
+**执行动作：**
+1. 生成建表 SQL
+2. 执行创建表
+
+**建表语句：**
+```sql
+CREATE TABLE model_tags (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(32) NOT NULL DEFAULT '' COMMENT '标签名称',
+    code VARCHAR(32) NOT NULL DEFAULT '' COMMENT '标签编码',
+    description VARCHAR(255) NOT NULL DEFAULT '' COMMENT '标签描述',
+    color VARCHAR(16) NOT NULL DEFAULT '' COMMENT '标签颜色',
+    sort INT NOT NULL DEFAULT 0 COMMENT '排序',
+    use_count INT NOT NULL DEFAULT 0 COMMENT '使用次数',
+    status TINYINT NOT NULL DEFAULT 1 COMMENT '状态 0禁用 1启用',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    create_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    create_by_name VARCHAR(64) NOT NULL DEFAULT '',
+    update_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    update_by_name VARCHAR(64) NOT NULL DEFAULT '',
+    UNIQUE KEY uk_code (code),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模型标签表';
+```
+
+**检查标准：**
+- [ ] 表创建成功
+- [ ] 唯一索引 code 生效
+
+#### 3.2 模型-标签关联表新建
+
+**建表语句：**
+```sql
+CREATE TABLE model_tag_relations (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    model_id BIGINT UNSIGNED NOT NULL COMMENT '模型ID',
+    tag_id BIGINT UNSIGNED NOT NULL COMMENT '标签ID',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    create_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    UNIQUE KEY uk_model_tag (model_id, tag_id),
+    INDEX idx_tag_id (tag_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='模型标签关联表';
+```
+
+#### 3.3 后端代码实现
+
+**执行动作：**
+1. `domain/thinking/tag/model.go`
+   - TagEntity + TagRelationEntity
+   - Validate() + IncrementUseCount() + DecrementUseCount()
+
+2. `api/thinking/tag.go`
+   - CRUD + Hot（热门标签）
+   - AddToModel / RemoveFromModel / GetByModel
+
+3. `logic/thinking/tag.go`
+
+**检查标准：**
+- [ ] 打标签时 use_count 自增
+- [ ] 移除标签时 use_count 自减
+- [ ] 热门标签按 use_count 排序
+
+#### 3.4 接口自测
+
+```bash
+# 创建标签
+curl -X POST localhost:8080/api/v1/thinking/tag \
+  -d '{"name":"决策","code":"decision","color":"#FF5722"}'
+
+# 给模型打标签
+curl -X POST localhost:8080/api/v1/thinking/model/tags \
+  -d '{"model_id":1,"tag_ids":[1,2,3]}'
+
+# 热门标签
+curl localhost:8080/api/v1/thinking/tag/hot?limit=10
+```
 
 ---
 
-## 五、开发顺序依赖
+### 任务4：课题管理（topics）
+
+#### 4.1 数据表检查
+
+**技术方案字段：**
+```
+id, title, description, background, goal, constraints,
+status, user_id, model_id, model_name, priority, tags,
+analysis_count, action_count, deadline, complete_time,
++ 7个审计字段
+```
+
+**检查标准：**
+- [ ] 包含模型关联字段（model_id, model_name）
+- [ ] 包含统计字段（analysis_count, action_count）
+- [ ] 索引：user_id, model_id, status
+
+#### 4.2 数据表调整
+
+**执行动作：**
+1. 对比现有表结构，生成 ALTER 语句
+
+#### 4.3 后端代码实现
+
+**执行动作：**
+1. `domain/thinking/topic/model.go`
+   - Entity + SelectModel() + RemoveModel() + Complete() + Archive()
+
+2. `api/thinking/topic.go`
+   - CRUD + GetMy + SelectModel + RemoveModel + UpdateStatus + Complete + Archive + Statistics
+
+3. `logic/thinking/topic.go`
+
+**检查标准：**
+- [ ] 选用模型后 model_id 和 model_name 正确填充
+- [ ] 完成课题时 complete_time 自动设置
+- [ ] 统计接口返回各状态数量
+
+#### 4.4 接口自测
+
+```bash
+# 创建课题
+curl -X POST localhost:8080/api/v1/thinking/topic \
+  -d '{"title":"职业发展规划","description":"分析未来3年职业方向"}'
+
+# 选用模型
+curl -X POST localhost:8080/api/v1/thinking/topic/select-model \
+  -d '{"topic_id":1,"model_id":1}'
+
+# 我的课题
+curl localhost:8080/api/v1/thinking/topic/my
+
+# 课题统计
+curl localhost:8080/api/v1/thinking/topic/statistics
+```
+
+---
+
+### 任务5：分析记录（topic_analyses）
+
+#### 5.1 数据表检查
+
+**技术方案字段：**
+```
+id, topic_id, model_id, model_name, content, ai_analysis,
+ai_suggestions, version, is_current, user_id, status,
++ 7个审计字段
+```
+
+**检查标准：**
+- [ ] content 字段为 TEXT 类型（存储 JSON）
+- [ ] 包含版本管理字段（version, is_current）
+- [ ] 索引：topic_id, model_id, user_id
+
+#### 5.2 数据表调整
+
+**执行动作：**
+1. 确认字段类型正确
+2. 补充缺失字段
+
+#### 5.3 后端代码实现
+
+**执行动作：**
+1. `domain/thinking/analysis/model.go`
+   - Entity + SetAsCurrent() + IncrementVersion() + ParseContent() + SetAiResult()
+
+2. `api/thinking/analysis.go`
+   - Create + Update + Get + ByTopic + Current + History + SetCurrent
+   - **SaveWithAI**（核心：保存并调用 AI 分析）
+
+3. `logic/thinking/analysis.go`
+   - SaveWithAI 逻辑：保存内容 → 调用AI → 更新结果
+
+**检查标准：**
+- [ ] 创建分析时 version=1, is_current=1
+- [ ] 新版本创建时旧版本 is_current=0
+- [ ] SaveWithAI 返回 AI 分析结果
+
+#### 5.4 接口自测
+
+```bash
+# 创建分析
+curl -X POST localhost:8080/api/v1/thinking/analysis \
+  -d '{"topic_id":1,"model_id":1,"content":"{\"step1\":\"xxx\"}"}'
+
+# AI分析（核心）
+curl -X POST localhost:8080/api/v1/thinking/analysis/save-with-ai \
+  -d '{"topic_id":1,"model_id":1,"content":"{\"situation\":\"当前状态\"}"}'
+
+# 当前版本
+curl localhost:8080/api/v1/thinking/analysis/current?topic_id=1&model_id=1
+
+# 历史版本
+curl localhost:8080/api/v1/thinking/analysis/history/1/1
+```
+
+---
+
+### 任务6：行动管理（actions）
+
+#### 6.1 数据表新建
+
+**建表语句：**
+```sql
+CREATE TABLE actions (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(128) NOT NULL DEFAULT '' COMMENT '行动标题',
+    description TEXT COMMENT '行动描述',
+    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
+    topic_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '关联课题ID',
+    topic_title VARCHAR(128) NOT NULL DEFAULT '' COMMENT '课题标题',
+    analysis_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '来源分析ID',
+    priority TINYINT NOT NULL DEFAULT 2 COMMENT '优先级 1低 2中 3高',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态 0待执行 1进行中 2已完成 3已取消',
+    progress TINYINT NOT NULL DEFAULT 0 COMMENT '进度 0-100',
+    deadline TIMESTAMP NULL COMMENT '截止时间',
+    complete_time TIMESTAMP NULL COMMENT '完成时间',
+    guide_principle TEXT COMMENT '指导原则',
+    followup_count INT NOT NULL DEFAULT 0 COMMENT '跟进记录数',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    create_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    create_by_name VARCHAR(64) NOT NULL DEFAULT '',
+    update_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    update_by_name VARCHAR(64) NOT NULL DEFAULT '',
+    INDEX idx_user_id (user_id),
+    INDEX idx_topic_id (topic_id),
+    INDEX idx_status (status),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行动表';
+```
+
+**检查标准：**
+- [ ] 表创建成功
+- [ ] 包含所有索引
+
+#### 6.2 后端代码实现
+
+**执行动作：**
+1. `domain/thinking/action/model.go`
+   - Entity + Validate() + UpdateProgress() + Complete() + Cancel() + CheckOverdue()
+
+2. `api/thinking/action.go`
+   - CRUD + GetMy + FromAnalysis + UpdateProgress + Complete + Statistics
+
+3. `logic/thinking/action.go`
+   - FromAnalysis：从分析结果批量导出行动
+
+**检查标准：**
+- [ ] 完成时自动设置 complete_time 和 status=2
+- [ ] 进度更新时自动更新 status（100%→完成）
+- [ ] FromAnalysis 能批量创建行动
+
+#### 6.3 接口自测
+
+```bash
+# 从分析导出行动
+curl -X POST localhost:8080/api/v1/thinking/action/from-analysis \
+  -d '{"analysis_id":1,"actions":[{"title":"行动1"},{"title":"行动2"}]}'
+
+# 更新进度
+curl -X POST localhost:8080/api/v1/thinking/action/progress \
+  -d '{"id":1,"progress":50}'
+
+# 完成行动
+curl -X POST localhost:8080/api/v1/thinking/action/complete \
+  -d '{"id":1}'
+
+# 我的行动
+curl localhost:8080/api/v1/thinking/action/my?status=1
+
+# 行动统计
+curl localhost:8080/api/v1/thinking/action/statistics
+```
+
+---
+
+### 任务7：跟进记录（action_followups）
+
+#### 7.1 数据表新建
+
+**建表语句：**
+```sql
+CREATE TABLE action_followups (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    action_id BIGINT UNSIGNED NOT NULL COMMENT '行动ID',
+    user_id BIGINT UNSIGNED NOT NULL COMMENT '用户ID',
+    content TEXT NOT NULL COMMENT '跟进内容',
+    progress_before TINYINT NOT NULL DEFAULT 0 COMMENT '跟进前进度',
+    progress_after TINYINT NOT NULL DEFAULT 0 COMMENT '跟进后进度',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    create_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    create_by_name VARCHAR(64) NOT NULL DEFAULT '',
+    update_by BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    update_by_name VARCHAR(64) NOT NULL DEFAULT '',
+    INDEX idx_action_id (action_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_deleted_at (deleted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='行动跟进记录表';
+```
+
+#### 7.2 后端代码实现
+
+**执行动作：**
+1. `domain/thinking/followup/model.go`
+   - Entity + Validate() + SetProgressChange()
+
+2. `api/thinking/followup.go`
+   - Create + Update + Delete + Get + ByAction
+
+3. `logic/thinking/followup.go`
+   - 创建跟进时同步更新 action 的 progress 和 followup_count
+
+**检查标准：**
+- [ ] 创建跟进后 action.followup_count 自增
+- [ ] 创建跟进后 action.progress 更新为 progress_after
+- [ ] 删除跟进后 followup_count 自减
+
+#### 7.3 接口自测
+
+```bash
+# 添加跟进
+curl -X POST localhost:8080/api/v1/thinking/followup \
+  -d '{"action_id":1,"content":"完成第一阶段","progress_after":30}'
+
+# 行动的跟进列表
+curl localhost:8080/api/v1/thinking/followup/by-action/1
+```
+
+---
+
+## 四、执行顺序
 
 ```
-阶段一（重组）
-    │
-    ├─→ 阶段二（模型）─→ 阶段三（标签）─→ 阶段四（分类）
-    │
-    └─→ 阶段五（课题）─→ 阶段六（分析）─→ 阶段七（行动）─→ 阶段八（跟进）
-                                              │
-                                              └─→ 阶段九（数据库）
-                                                      │
-                                                      └─→ 阶段十（测试）
+任务1（模型）──┬── 任务2（分类）
+              └── 任务3（标签）
+                      │
+任务4（课题）─────────┘
+       │
+任务5（分析）
+       │
+任务6（行动）
+       │
+任务7（跟进）
 ```
 
----
-
-## 六、风险与注意事项
-
-### 6.1 代码迁移风险
-
-- 包名修改后需要全局搜索替换 import 路径
-- 路由变更后前端需要同步修改
-- 确保 git 提交记录清晰，便于回滚
-
-### 6.2 AI分析集成
-
-- MVP 阶段可先使用固定的 AI 服务调用（如直接调用 OpenAI）
-- AI 领域的完整基础设施可在后续阶段开发
-- 需要预留 AI 调用的接口抽象
-
-### 6.3 数据兼容性
-
-- 检查现有测试数据是否符合新的字段定义
-- 确保审计字段（create_by, update_by 等）正确填充
+**并行可能性：**
+- 任务1、2、3、4 可并行（无依赖）
+- 任务5 依赖任务4（课题）
+- 任务6 依赖任务5（分析）
+- 任务7 依赖任务6（行动）
 
 ---
 
-## 七、下一步行动
+## 五、总检查清单
 
-1. **确认现有代码状态** - 检查 market/subject 目录下的代码完成度
-2. **确定迁移策略** - 是重写还是移动修改
-3. **开始阶段一** - 代码结构重组
+### 数据表检查
+
+- [ ] thinking_models 结构正确
+- [ ] model_categories 结构正确
+- [ ] model_tags 已创建
+- [ ] model_tag_relations 已创建
+- [ ] topics 结构正确
+- [ ] topic_analyses 结构正确
+- [ ] actions 已创建
+- [ ] action_followups 已创建
+
+### 后端代码检查
+
+- [ ] domain/thinking/ 包含 7 个模块
+- [ ] api/thinking/ 包含 7 个接口文件
+- [ ] logic/thinking/ 包含 7 个逻辑文件
+- [ ] router/v1.go 注册所有路由
+- [ ] `go build` 编译通过
+- [ ] `go vet` 无警告
+
+### 接口测试检查
+
+- [ ] 模型 CRUD + 发布/下架 正常
+- [ ] 分类树 + 移动 正常
+- [ ] 标签 CRUD + 打标签 正常
+- [ ] 课题 CRUD + 选模型 正常
+- [ ] 分析 CRUD + AI分析 正常
+- [ ] 行动 CRUD + 从分析导出 正常
+- [ ] 跟进 CRUD + 同步更新行动 正常
+
+---
+
+## 六、开始执行
+
+准备好后，请告诉我 **"开始任务1"** 或指定任务编号，我将按照上述流程执行。

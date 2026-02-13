@@ -5,6 +5,7 @@ import (
 	"thinkingModels/api/market"
 	"thinkingModels/api/master"
 	"thinkingModels/api/subject"
+	"thinkingModels/api/thinking"
 
 	"github.com/gin-gonic/gin"
 )
@@ -108,6 +109,101 @@ func AuthorizedRouters() {
 		analysisGroup.PUT("", analysisApi.Update)
 		analysisGroup.GET("/:id", analysisApi.Get)
 		analysisGroup.DELETE("", analysisApi.Del)
+
+		// ==================== Thinking 模块 (MVP) ====================
+		// 思维模型管理
+		thinkingModelApi := thinking.NewModel()
+		thinkingModelGroup := api.Group("/thinking/model")
+		thinkingModelGroup.GET("/list", thinkingModelApi.List)
+		thinkingModelGroup.GET("/my", thinkingModelApi.ListMy)
+		thinkingModelGroup.GET("/code/:code", thinkingModelApi.GetByCode)
+		thinkingModelGroup.POST("", thinkingModelApi.Create)
+		thinkingModelGroup.PUT("", thinkingModelApi.Update)
+		thinkingModelGroup.GET("/:id", thinkingModelApi.Get)
+		thinkingModelGroup.DELETE("", thinkingModelApi.Del)
+		thinkingModelGroup.POST("/publish", thinkingModelApi.Publish)
+		thinkingModelGroup.POST("/unpublish/:id", thinkingModelApi.Unpublish)
+		thinkingModelGroup.POST("/fork", thinkingModelApi.Fork)
+
+		// 模型分类管理
+		thinkingCategoryApi := thinking.NewCategory()
+		thinkingCategoryGroup := api.Group("/thinking/category")
+		thinkingCategoryGroup.GET("/list", thinkingCategoryApi.List)
+		thinkingCategoryGroup.GET("/tree", thinkingCategoryApi.Tree)
+		thinkingCategoryGroup.GET("/children/:id", thinkingCategoryApi.Children)
+		thinkingCategoryGroup.POST("/move", thinkingCategoryApi.Move)
+		thinkingCategoryGroup.POST("/status", thinkingCategoryApi.UpdateStatus)
+		thinkingCategoryGroup.POST("", thinkingCategoryApi.Create)
+		thinkingCategoryGroup.PUT("", thinkingCategoryApi.Update)
+		thinkingCategoryGroup.GET("/:id", thinkingCategoryApi.Get)
+		thinkingCategoryGroup.DELETE("", thinkingCategoryApi.Del)
+
+		// 模型标签管理
+		thinkingTagApi := thinking.NewTag()
+		thinkingTagGroup := api.Group("/thinking/tag")
+		thinkingTagGroup.GET("/model/:modelId", thinkingTagApi.GetByModel)
+		thinkingTagGroup.POST("/model", thinkingTagApi.AddToModel)
+		thinkingTagGroup.DELETE("/model", thinkingTagApi.RemoveFromModel)
+		thinkingTagGroup.GET("/hot", thinkingTagApi.Hot)
+
+		// 课题管理
+		thinkingTopicApi := thinking.NewTopic()
+		thinkingTopicGroup := api.Group("/thinking/topic")
+		thinkingTopicGroup.GET("/list", thinkingTopicApi.List)
+		thinkingTopicGroup.GET("/my", thinkingTopicApi.ListMy)
+		thinkingTopicGroup.POST("/select-model", thinkingTopicApi.SelectModel)
+		thinkingTopicGroup.POST("/remove-model/:id", thinkingTopicApi.RemoveModel)
+		thinkingTopicGroup.POST("/status", thinkingTopicApi.UpdateStatus)
+		thinkingTopicGroup.POST("/complete/:id", thinkingTopicApi.Complete)
+		thinkingTopicGroup.POST("/archive/:id", thinkingTopicApi.Archive)
+		thinkingTopicGroup.POST("/reopen/:id", thinkingTopicApi.Reopen)
+		thinkingTopicGroup.GET("/statistics", thinkingTopicApi.Statistics)
+		thinkingTopicGroup.POST("", thinkingTopicApi.Create)
+		thinkingTopicGroup.PUT("", thinkingTopicApi.Update)
+		thinkingTopicGroup.GET("/:id", thinkingTopicApi.Get)
+		thinkingTopicGroup.DELETE("", thinkingTopicApi.Del)
+
+		// 分析记录管理
+		thinkingAnalysisApi := thinking.NewAnalysis()
+		thinkingAnalysisGroup := api.Group("/thinking/analysis")
+		thinkingAnalysisGroup.POST("/save-with-ai", thinkingAnalysisApi.SaveWithAi)
+		thinkingAnalysisGroup.GET("/list", thinkingAnalysisApi.List)
+		thinkingAnalysisGroup.GET("/my", thinkingAnalysisApi.ListMy)
+		thinkingAnalysisGroup.GET("/current", thinkingAnalysisApi.GetCurrent)
+		thinkingAnalysisGroup.GET("/latest", thinkingAnalysisApi.GetLatest)
+		thinkingAnalysisGroup.GET("/by-topic/:topicId", thinkingAnalysisApi.ListByTopic)
+		thinkingAnalysisGroup.GET("/history/:topicId/:modelId", thinkingAnalysisApi.GetHistory)
+		thinkingAnalysisGroup.POST("/set-current", thinkingAnalysisApi.SetCurrent)
+		thinkingAnalysisGroup.POST("", thinkingAnalysisApi.Create)
+		thinkingAnalysisGroup.PUT("", thinkingAnalysisApi.Update)
+		thinkingAnalysisGroup.GET("/:id", thinkingAnalysisApi.Get)
+		thinkingAnalysisGroup.DELETE("", thinkingAnalysisApi.Del)
+
+		// 行动项管理
+		thinkingActionApi := thinking.NewAction()
+		thinkingActionGroup := api.Group("/thinking/action")
+		thinkingActionGroup.GET("/list", thinkingActionApi.List)
+		thinkingActionGroup.GET("/my", thinkingActionApi.ListMy)
+		thinkingActionGroup.POST("/from-analysis", thinkingActionApi.CreateFromAnalysis)
+		thinkingActionGroup.GET("/by-topic/:topicId", thinkingActionApi.ListByTopic)
+		thinkingActionGroup.GET("/by-analysis/:analysisId", thinkingActionApi.ListByAnalysis)
+		thinkingActionGroup.POST("/progress", thinkingActionApi.UpdateProgress)
+		thinkingActionGroup.POST("/complete/:id", thinkingActionApi.Complete)
+		thinkingActionGroup.POST("/cancel/:id", thinkingActionApi.Cancel)
+		thinkingActionGroup.GET("/statistics", thinkingActionApi.Statistics)
+		thinkingActionGroup.POST("", thinkingActionApi.Create)
+		thinkingActionGroup.PUT("", thinkingActionApi.Update)
+		thinkingActionGroup.GET("/:id", thinkingActionApi.Get)
+		thinkingActionGroup.DELETE("", thinkingActionApi.Del)
+
+		// 跟进记录管理
+		thinkingFollowUpApi := thinking.NewFollowUp()
+		thinkingFollowUpGroup := api.Group("/thinking/followup")
+		thinkingFollowUpGroup.GET("/by-action/:actionId", thinkingFollowUpApi.ListByAction)
+		thinkingFollowUpGroup.POST("", thinkingFollowUpApi.Create)
+		thinkingFollowUpGroup.PUT("", thinkingFollowUpApi.Update)
+		thinkingFollowUpGroup.GET("/:id", thinkingFollowUpApi.Get)
+		thinkingFollowUpGroup.DELETE("", thinkingFollowUpApi.Del)
 	}
 	Routers = append(Routers, authorizedRouters)
 }
