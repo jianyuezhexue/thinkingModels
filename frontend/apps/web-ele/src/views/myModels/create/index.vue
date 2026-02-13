@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref, reactive } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
@@ -8,24 +8,28 @@ import {
   ElButton,
   ElCard,
   ElInput,
-  ElSelect,
-  ElOption,
   ElForm,
   ElFormItem,
-  ElSwitch,
   ElTag,
   ElMessage,
-  ElSteps,
-  ElStep,
   ElUpload,
+  ElMessageBox,
 } from 'element-plus';
-import type { UploadProps, UploadFile } from 'element-plus';
+import type { UploadProps, UploadFile, FormInstance } from 'element-plus';
 
 // 路由
+const route = useRoute();
 const router = useRouter();
+const editId = computed(() => route.query.id as string | undefined);
+const isEdit = computed(() => !!editId.value);
 
 // 当前步骤
 const currentStep = ref(0);
+const steps = [
+  { id: 0, label: '基本信息', icon: '📋', description: '模型名称、分类、简介' },
+  { id: 1, label: '内容编辑', icon: '📝', description: '使用步骤和案例' },
+  { id: 2, label: '发布设置', icon: '🚀', description: '定价和发布选项' },
+];
 
 // 表单数据
 const form = reactive({
@@ -35,7 +39,7 @@ const form = reactive({
   tags: [] as string[],
   cover: '',
   isFree: true,
-  price: 0,
+  price: 29,
   content: {
     overview: '',
     steps: [
@@ -44,9 +48,11 @@ const form = reactive({
     examples: [
       { title: '', content: '' },
     ],
-    tips: [] as string[],
   },
 });
+
+// 表单引用
+const formRef = ref<FormInstance>();
 
 // 表单校验规则
 const rules = {
@@ -65,98 +71,150 @@ const rules = {
 
 // 分类选项
 const categories = [
-  { value: 'business', label: '商业管理' },
-  { value: 'strategy', label: '战略规划' },
-  { value: 'innovation', label: '创新思维' },
-  { value: 'analysis', label: '分析工具' },
-  { value: 'decision', label: '决策方法' },
-  { value: 'creative', label: '创意构思' },
-  { value: 'psychology', label: '心理学' },
-  { value: 'communication', label: '沟通表达' },
+  { value: 'business', label: '商业管理', icon: '💼' },
+  { value: 'strategy', label: '战略规划', icon: '🎯' },
+  { value: 'innovation', label: '创新思维', icon: '💡' },
+  { value: 'analysis', label: '分析工具', icon: '📊' },
+  { value: 'decision', label: '决策方法', icon: '⚖️' },
+  { value: 'creative', label: '创意构思', icon: '🎨' },
+  { value: 'psychology', label: '心理学', icon: '🧠' },
+  { value: 'communication', label: '沟通表达', icon: '💬' },
 ];
+
+// 推荐标签
+const suggestedTags = ['战略', '分析', '思维', '创新', '管理', '决策', '效率', '逻辑', '沟通', '规划'];
 
 // 标签输入
 const tagInput = ref('');
 const tagInputVisible = ref(false);
 
-// 表单引用
-const formRef = ref();
+// 加载编辑数据
+onMounted(async () => {
+  if (isEdit.value) {
+    // 模拟加载编辑数据
+    await new Promise(resolve => setTimeout(resolve, 500));
+    form.title = 'SWOT 分析思维模型';
+    form.description = '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁。';
+    form.category = 'business';
+    form.tags = ['战略', '分析', '商业'];
+    form.isFree = false;
+    form.price = 29;
+    form.content.overview = 'SWOT 分析是一种战略规划工具...';
+    form.content.steps = [
+      { title: '识别优势', description: '列出相对于竞争对手的优势...' },
+      { title: '识别劣势', description: '诚实地列出需要改进的领域...' },
+    ];
+    form.content.examples = [
+      { title: '电商平台案例', content: '优势：用户基础庞大...' },
+    ];
+  }
+});
 
-// 添加标签
+// 标签操作
 function handleAddTag() {
-  if (tagInput.value && !form.tags.includes(tagInput.value)) {
-    form.tags.push(tagInput.value);
+  const tag = tagInput.value.trim();
+  if (tag && !form.tags.includes(tag) && form.tags.length < 5) {
+    form.tags.push(tag);
   }
   tagInput.value = '';
   tagInputVisible.value = false;
 }
 
-// 删除标签
 function handleRemoveTag(tag: string) {
   form.tags = form.tags.filter(t => t !== tag);
 }
 
-// 添加步骤
+function addSuggestedTag(tag: string) {
+  if (!form.tags.includes(tag) && form.tags.length < 5) {
+    form.tags.push(tag);
+  }
+}
+
+// 步骤操作
 function addStep() {
   form.content.steps.push({ title: '', description: '' });
 }
 
-// 删除步骤
 function removeStep(index: number) {
-  form.content.steps.splice(index, 1);
+  if (form.content.steps.length > 1) {
+    form.content.steps.splice(index, 1);
+  }
 }
 
-// 添加案例
+// 案例操作
 function addExample() {
   form.content.examples.push({ title: '', content: '' });
 }
 
-// 删除案例
 function removeExample(index: number) {
-  form.content.examples.splice(index, 1);
+  if (form.content.examples.length > 1) {
+    form.content.examples.splice(index, 1);
+  }
 }
 
-// 上一步
+// 步骤导航
+async function goToStep(step: number) {
+  if (step < currentStep.value) {
+    currentStep.value = step;
+    return;
+  }
+  
+  // 验证当前步骤
+  if (currentStep.value === 0) {
+    try {
+      await formRef.value?.validate();
+    } catch {
+      ElMessage.warning('请完善基本信息');
+      return;
+    }
+  }
+  
+  if (currentStep.value === 1) {
+    if (!form.content.overview.trim()) {
+      ElMessage.warning('请填写模型概述');
+      return;
+    }
+    const hasValidStep = form.content.steps.some(s => s.title.trim() && s.description.trim());
+    if (!hasValidStep) {
+      ElMessage.warning('请至少添加一个完整的使用步骤');
+      return;
+    }
+  }
+  
+  currentStep.value = step;
+}
+
 function prevStep() {
   if (currentStep.value > 0) {
     currentStep.value--;
   }
 }
 
-// 下一步
 async function nextStep() {
-  if (currentStep.value === 0) {
-    await formRef.value?.validate();
-  }
-  if (currentStep.value < 2) {
-    currentStep.value++;
-  }
+  await goToStep(currentStep.value + 1);
 }
 
-// 提交表单
+// 提交
 async function handleSubmit() {
   try {
-    // TODO: 调用创建 API
-    // await createModelApi(form);
-    ElMessage.success('模型创建成功！');
+    await ElMessageBox.confirm(
+      '提交后模型将进入审核流程，审核通过后将发布到市场。确定提交吗？',
+      '提交审核',
+      { type: 'info' }
+    );
+    // TODO: 调用 API
+    ElMessage.success(isEdit.value ? '模型已更新并提交审核' : '模型已创建并提交审核');
     router.push('/my-models');
-  } catch (error) {
-    console.error('创建失败:', error);
-    ElMessage.error('创建失败，请重试');
+  } catch {
+    // 用户取消
   }
 }
 
 // 保存草稿
 async function handleSaveDraft() {
-  try {
-    // TODO: 调用保存草稿 API
-    // await saveModelDraftApi(form);
-    ElMessage.success('草稿已保存');
-    router.push('/my-models');
-  } catch (error) {
-    console.error('保存失败:', error);
-    ElMessage.error('保存失败');
-  }
+  // TODO: 调用 API
+  ElMessage.success('草稿已保存');
+  router.push('/my-models');
 }
 
 // 取消
@@ -174,164 +232,264 @@ const handleCoverChange: UploadProps['onChange'] = (uploadFile: UploadFile) => {
     reader.readAsDataURL(uploadFile.raw);
   }
 };
+
+// 计算完成进度
+const formProgress = computed(() => {
+  let filled = 0;
+  let total = 8;
+  
+  if (form.title) filled++;
+  if (form.description) filled++;
+  if (form.category) filled++;
+  if (form.tags.length > 0) filled++;
+  if (form.content.overview) filled++;
+  if (form.content.steps.some(s => s.title && s.description)) filled++;
+  if (form.content.examples.some(e => e.title && e.content)) filled++;
+  if (form.cover) filled++;
+  
+  return Math.round((filled / total) * 100);
+});
 </script>
 
 <template>
   <Page
-    description="创建并分享你的思维模型，帮助他人更好地思考"
-    title="创建思维模型"
+    :description="isEdit ? '修改模型内容和设置' : '创建并分享你的思维模型'"
+    :title="isEdit ? '编辑模型' : '创建思维模型'"
+    content-class="p-6 bg-gray-50"
   >
-    <ElCard shadow="never">
-      <!-- 步骤条 -->
-      <ElSteps :active="currentStep" finish-status="success" class="mb-8">
-        <ElStep title="基本信息" description="填写模型的基本信息" />
-        <ElStep title="详细内容" description="添加模型的使用步骤和案例" />
-        <ElStep title="发布设置" description="设置价格和发布选项" />
-      </ElSteps>
-
-      <!-- 步骤 1: 基本信息 -->
-      <div v-if="currentStep === 0">
-        <ElForm
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-position="top"
-          style="max-width: 800px"
-        >
-          <ElFormItem label="模型封面" prop="cover">
-            <ElUpload
-              class="cover-uploader"
-              :auto-upload="false"
-              :on-change="handleCoverChange"
-              :show-file-list="false"
-              accept="image/*"
-            >
-              <div
-                v-if="form.cover"
-                class="cover-preview"
-                :style="{ backgroundImage: `url(${form.cover})` }"
+    <div class="flex gap-6">
+      <!-- 左侧主表单 -->
+      <div class="flex-1 min-w-0 space-y-6">
+        <!-- 步骤导航 -->
+        <ElCard shadow="hover" class="!rounded-xl">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+              <button
+                v-for="(step, index) in steps"
+                :key="step.id"
+                class="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                :class="[
+                  currentStep === index
+                    ? 'bg-purple-100 border-2 border-purple-300'
+                    : index < currentStep
+                    ? 'bg-green-50 border border-green-200'
+                    : 'bg-gray-50 border border-gray-200 hover:border-purple-200'
+                ]"
+                @click="goToStep(index)"
               >
-                <div class="cover-overlay">
-                  <span>更换封面</span>
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+                  :class="[
+                    currentStep === index
+                      ? 'bg-purple-600 text-white'
+                      : index < currentStep
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  ]"
+                >
+                  <span v-if="index < currentStep">✓</span>
+                  <span v-else>{{ step.icon }}</span>
+                </div>
+                <div class="text-left">
+                  <div class="font-semibold" :class="currentStep === index ? 'text-purple-700' : 'text-gray-700'">
+                    {{ step.label }}
+                  </div>
+                  <div class="text-xs text-gray-400">{{ step.description }}</div>
+                </div>
+              </button>
+            </div>
+            <div class="text-right">
+              <div class="text-sm text-gray-500">完成度</div>
+              <div class="text-2xl font-bold text-purple-600">{{ formProgress }}%</div>
+            </div>
+          </div>
+        </ElCard>
+
+        <!-- 步骤 1: 基本信息 -->
+        <ElCard v-if="currentStep === 0" shadow="hover" class="!rounded-xl">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📋</span>
+              <span class="font-semibold text-gray-700">基本信息</span>
+            </div>
+          </template>
+          
+          <ElForm ref="formRef" :model="form" :rules="rules" label-position="top" class="max-w-2xl">
+            <!-- 封面上传 -->
+            <ElFormItem label="模型封面">
+              <ElUpload
+                class="w-full"
+                :auto-upload="false"
+                :on-change="handleCoverChange"
+                :show-file-list="false"
+                accept="image/*"
+              >
+                <div
+                  v-if="form.cover"
+                  class="relative w-full h-48 rounded-xl overflow-hidden cursor-pointer group"
+                >
+                  <img :src="form.cover" class="w-full h-full object-cover" />
+                  <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="text-white text-sm">点击更换封面</span>
+                  </div>
+                </div>
+                <div v-else class="w-full h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 transition-colors bg-gray-50">
+                  <div class="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-3">
+                    <svg class="h-8 w-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                  </div>
+                  <p class="text-sm text-gray-500">点击上传封面图片</p>
+                  <p class="text-xs text-gray-400 mt-1">建议尺寸 800×400，支持 JPG、PNG</p>
+                </div>
+              </ElUpload>
+            </ElFormItem>
+
+            <!-- 模型名称 -->
+            <ElFormItem label="模型名称" prop="title">
+              <ElInput
+                v-model="form.title"
+                placeholder="给你的思维模型起个名字，例如：SWOT 分析模型"
+                maxlength="50"
+                show-word-limit
+                class="!rounded-lg"
+              />
+            </ElFormItem>
+
+            <!-- 模型描述 -->
+            <ElFormItem label="模型描述" prop="description">
+              <ElInput
+                v-model="form.description"
+                type="textarea"
+                :rows="4"
+                placeholder="简要描述这个思维模型的用途、适用场景和价值..."
+                maxlength="500"
+                show-word-limit
+              />
+            </ElFormItem>
+
+            <!-- 模型分类 -->
+            <ElFormItem label="模型分类" prop="category">
+              <div class="grid grid-cols-4 gap-3">
+                <button
+                  v-for="cat in categories"
+                  :key="cat.value"
+                  type="button"
+                  class="p-3 rounded-lg border-2 text-center transition-all"
+                  :class="[
+                    form.category === cat.value
+                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      : 'border-gray-200 hover:border-purple-300 text-gray-600'
+                  ]"
+                  @click="form.category = cat.value"
+                >
+                  <div class="text-xl mb-1">{{ cat.icon }}</div>
+                  <div class="text-sm font-medium">{{ cat.label }}</div>
+                </button>
+              </div>
+            </ElFormItem>
+
+            <!-- 标签 -->
+            <ElFormItem label="标签">
+              <div class="space-y-3">
+                <div class="flex flex-wrap gap-2">
+                  <ElTag
+                    v-for="tag in form.tags"
+                    :key="tag"
+                    closable
+                    effect="plain"
+                    class="!bg-purple-50 !text-purple-600 !border-purple-200 !rounded-full"
+                    @close="handleRemoveTag(tag)"
+                  >
+                    {{ tag }}
+                  </ElTag>
+                  <ElInput
+                    v-if="tagInputVisible"
+                    v-model="tagInput"
+                    size="small"
+                    class="!w-24"
+                    @keyup.enter="handleAddTag"
+                    @blur="handleAddTag"
+                  />
+                  <ElButton
+                    v-else-if="form.tags.length < 5"
+                    size="small"
+                    class="!rounded-full"
+                    @click="tagInputVisible = true"
+                  >
+                    + 添加标签
+                  </ElButton>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs text-gray-400 mr-2">推荐：</span>
+                  <button
+                    v-for="tag in suggestedTags.filter(t => !form.tags.includes(t))"
+                    :key="tag"
+                    type="button"
+                    class="px-2 py-0.5 text-xs bg-gray-100 text-gray-500 rounded-full hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                    @click="addSuggestedTag(tag)"
+                  >
+                    + {{ tag }}
+                  </button>
                 </div>
               </div>
-              <div v-else class="cover-placeholder">
-                <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                <p class="mt-2 text-sm text-gray-500">点击上传封面图片</p>
-                <p class="text-xs text-gray-400">建议尺寸 800x400，支持 JPG、PNG</p>
+            </ElFormItem>
+          </ElForm>
+        </ElCard>
+
+        <!-- 步骤 2: 内容编辑 -->
+        <template v-if="currentStep === 1">
+          <!-- 模型概述 -->
+          <ElCard shadow="hover" class="!rounded-xl">
+            <template #header>
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📖</span>
+                <span class="font-semibold text-gray-700">模型概述</span>
               </div>
-            </ElUpload>
-          </ElFormItem>
-
-          <ElFormItem label="模型名称" prop="title">
-            <ElInput
-              v-model="form.title"
-              placeholder="给你的思维模型起个名字，例如：SWOT 分析模型"
-              maxlength="50"
-              show-word-limit
-            />
-          </ElFormItem>
-
-          <ElFormItem label="模型描述" prop="description">
-            <ElInput
-              v-model="form.description"
-              type="textarea"
-              :rows="4"
-              placeholder="简要描述这个思维模型的用途、适用场景和价值..."
-              maxlength="500"
-              show-word-limit
-            />
-          </ElFormItem>
-
-          <ElFormItem label="模型分类" prop="category">
-            <ElSelect v-model="form.category" placeholder="选择模型分类" style="width: 100%">
-              <ElOption
-                v-for="cat in categories"
-                :key="cat.value"
-                :label="cat.label"
-                :value="cat.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-
-          <ElFormItem label="标签">
-            <div class="flex flex-wrap gap-2">
-              <ElTag
-                v-for="tag in form.tags"
-                :key="tag"
-                closable
-                @close="handleRemoveTag(tag)"
-              >
-                {{ tag }}
-              </ElTag>
-              <ElInput
-                v-if="tagInputVisible"
-                v-model="tagInput"
-                size="small"
-                style="width: 100px"
-                @keyup.enter="handleAddTag"
-                @blur="handleAddTag"
-                v-focus
-              />
-              <ElButton
-                v-else
-                size="small"
-                @click="tagInputVisible = true"
-              >
-                + 添加标签
-              </ElButton>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">标签帮助用户更好地发现你的模型，建议 3-5 个</p>
-          </ElFormItem>
-        </ElForm>
-      </div>
-
-      <!-- 步骤 2: 详细内容 -->
-      <div v-else-if="currentStep === 1">
-        <div style="max-width: 800px">
-          <div class="mb-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-2">模型概述</h3>
+            </template>
             <p class="text-sm text-gray-500 mb-4">介绍这个思维模型的背景、原理和核心价值</p>
             <ElInput
               v-model="form.content.overview"
               type="textarea"
               :rows="6"
-              placeholder="详细介绍这个思维模型..."
+              placeholder="详细介绍这个思维模型的背景、理论基础、核心原理和适用场景..."
             />
-          </div>
+          </ElCard>
 
-          <div class="mb-6">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-lg font-medium text-gray-900">使用步骤</h3>
-                <p class="text-sm text-gray-500">按顺序列出使用这个模型的步骤</p>
+          <!-- 使用步骤 -->
+          <ElCard shadow="hover" class="!rounded-xl">
+            <template #header>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">📝</span>
+                  <span class="font-semibold text-gray-700">使用步骤</span>
+                </div>
+                <ElButton type="primary" plain size="small" class="!rounded-full" @click="addStep">
+                  + 添加步骤
+                </ElButton>
               </div>
-              <ElButton type="primary" plain size="small" @click="addStep">
-                + 添加步骤
-              </ElButton>
-            </div>
+            </template>
+            <p class="text-sm text-gray-500 mb-4">按顺序列出使用这个模型的详细步骤</p>
             <div class="space-y-4">
               <div
                 v-for="(step, index) in form.content.steps"
                 :key="index"
-                class="rounded-lg border border-gray-200 p-4"
+                class="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100"
               >
                 <div class="flex items-start gap-4">
-                  <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-sm font-medium text-purple-600">
+                  <div class="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold flex-shrink-0">
                     {{ index + 1 }}
                   </div>
                   <div class="flex-1 space-y-3">
                     <ElInput
                       v-model="step.title"
-                      placeholder="步骤标题"
+                      placeholder="步骤标题，例如：识别优势 (Strengths)"
                     />
                     <ElInput
                       v-model="step.description"
                       type="textarea"
-                      :rows="2"
-                      placeholder="步骤说明..."
+                      :rows="3"
+                      placeholder="详细说明这个步骤的操作方法和注意事项..."
                     />
                   </div>
                   <ElButton
@@ -339,42 +497,52 @@ const handleCoverChange: UploadProps['onChange'] = (uploadFile: UploadFile) => {
                     type="danger"
                     plain
                     size="small"
+                    class="!rounded-full"
                     @click="removeStep(index)"
                   >
-                    删除
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
                   </ElButton>
                 </div>
               </div>
             </div>
-          </div>
+          </ElCard>
 
-          <div class="mb-6">
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-lg font-medium text-gray-900">实践案例</h3>
-                <p class="text-sm text-gray-500">提供真实或假设的应用案例</p>
+          <!-- 实践案例 -->
+          <ElCard shadow="hover" class="!rounded-xl">
+            <template #header>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">💡</span>
+                  <span class="font-semibold text-gray-700">实践案例</span>
+                </div>
+                <ElButton type="primary" plain size="small" class="!rounded-full" @click="addExample">
+                  + 添加案例
+                </ElButton>
               </div>
-              <ElButton type="primary" plain size="small" @click="addExample">
-                + 添加案例
-              </ElButton>
-            </div>
+            </template>
+            <p class="text-sm text-gray-500 mb-4">提供真实或假设的应用案例，帮助用户理解</p>
             <div class="space-y-4">
               <div
                 v-for="(example, index) in form.content.examples"
                 :key="index"
-                class="rounded-lg border border-gray-200 p-4"
+                class="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100"
               >
                 <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0">
+                    {{ index + 1 }}
+                  </div>
                   <div class="flex-1 space-y-3">
                     <ElInput
                       v-model="example.title"
-                      placeholder="案例标题"
+                      placeholder="案例标题，例如：某电商平台的 SWOT 分析"
                     />
                     <ElInput
                       v-model="example.content"
                       type="textarea"
-                      :rows="3"
-                      placeholder="案例详细内容..."
+                      :rows="4"
+                      placeholder="详细描述这个案例的背景、分析过程和结论..."
                     />
                   </div>
                   <ElButton
@@ -382,138 +550,305 @@ const handleCoverChange: UploadProps['onChange'] = (uploadFile: UploadFile) => {
                     type="danger"
                     plain
                     size="small"
+                    class="!rounded-full"
                     @click="removeExample(index)"
                   >
-                    删除
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
                   </ElButton>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
+          </ElCard>
+        </template>
 
-      <!-- 步骤 3: 发布设置 -->
-      <div v-else-if="currentStep === 2">
-        <div style="max-width: 600px">
-          <ElForm label-position="top">
-            <ElFormItem label="是否免费">
-              <ElSwitch
-                v-model="form.isFree"
-                active-text="免费"
-                inactive-text="付费"
-              />
-              <p class="text-xs text-gray-400 mt-2">
-                {{ form.isFree ? '用户可免费使用你的模型，有助于获得更多曝光和反馈' : '设置合理的价格，让你的知识产生价值' }}
-              </p>
-            </ElFormItem>
-
-            <ElFormItem v-if="!form.isFree" label="价格 (元)">
-              <ElInput
-                v-model.number="form.price"
-                type="number"
-                min="1"
-                max="9999"
-                placeholder="输入价格"
-              >
-                <template #prefix>¥</template>
-              </ElInput>
-              <p class="text-xs text-gray-400 mt-2">
-                建议定价：简单模型 9-29 元，复杂模型 39-99 元。平台将抽取 20% 作为服务费。
-              </p>
-            </ElFormItem>
-          </ElForm>
-
-          <div class="mt-8 rounded-lg bg-gray-50 p-4">
-            <h4 class="font-medium text-gray-900 mb-2">发布须知</h4>
-            <ul class="text-sm text-gray-500 space-y-1">
-              <li>• 模型提交后将进入审核流程，通常在 24 小时内完成</li>
-              <li>• 确保内容原创或已获得授权，禁止抄袭</li>
-              <li>• 模型一经发布，可被其他用户采纳、练习和评价</li>
-              <li>• 付费模型的收入将在用户确认收货后结算</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <!-- 底部按钮 -->
-      <div class="mt-8 flex justify-between">
-        <div>
-          <ElButton v-if="currentStep === 0" @click="handleCancel">
-            取消
-          </ElButton>
-          <ElButton v-else @click="prevStep">
-            上一步
-          </ElButton>
-        </div>
-        <div class="flex gap-3">
-          <ElButton v-if="currentStep < 2" type="primary" @click="nextStep">
-            下一步
-          </ElButton>
-          <template v-else>
-            <ElButton @click="handleSaveDraft">
-              保存草稿
-            </ElButton>
-            <ElButton type="primary" @click="handleSubmit">
-              提交审核
-            </ElButton>
+        <!-- 步骤 3: 发布设置 -->
+        <ElCard v-if="currentStep === 2" shadow="hover" class="!rounded-xl">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">🚀</span>
+              <span class="font-semibold text-gray-700">发布设置</span>
+            </div>
           </template>
-        </div>
+
+          <div class="max-w-xl space-y-6">
+            <!-- 定价设置 -->
+            <div class="p-6 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
+              <h4 class="font-semibold text-gray-800 mb-4">💰 定价设置</h4>
+              <div class="flex items-center gap-4 mb-4">
+                <button
+                  type="button"
+                  class="flex-1 p-4 rounded-xl border-2 transition-all text-center"
+                  :class="form.isFree ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'"
+                  @click="form.isFree = true"
+                >
+                  <div class="text-2xl mb-1">🆓</div>
+                  <div class="font-semibold" :class="form.isFree ? 'text-green-700' : 'text-gray-600'">免费</div>
+                  <div class="text-xs text-gray-400">获得更多曝光</div>
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 p-4 rounded-xl border-2 transition-all text-center"
+                  :class="!form.isFree ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'"
+                  @click="form.isFree = false"
+                >
+                  <div class="text-2xl mb-1">💎</div>
+                  <div class="font-semibold" :class="!form.isFree ? 'text-purple-700' : 'text-gray-600'">付费</div>
+                  <div class="text-xs text-gray-400">知识变现</div>
+                </button>
+              </div>
+              
+              <div v-if="!form.isFree" class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">设置价格</label>
+                  <div class="flex items-center gap-3">
+                    <ElInput
+                      v-model.number="form.price"
+                      type="number"
+                      min="1"
+                      max="999"
+                      class="!w-32"
+                    >
+                      <template #prefix>¥</template>
+                    </ElInput>
+                    <div class="flex gap-2">
+                      <button
+                        v-for="price in [9, 19, 29, 49, 99]"
+                        :key="price"
+                        type="button"
+                        class="px-3 py-1.5 text-sm rounded-full transition-colors"
+                        :class="form.price === price ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-purple-100'"
+                        @click="form.price = price"
+                      >
+                        ¥{{ price }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="p-3 bg-white rounded-lg text-sm text-gray-500">
+                  <div class="flex items-center justify-between mb-1">
+                    <span>售价</span>
+                    <span>¥{{ form.price }}</span>
+                  </div>
+                  <div class="flex items-center justify-between mb-1">
+                    <span>平台服务费 (20%)</span>
+                    <span class="text-red-500">-¥{{ (form.price * 0.2).toFixed(2) }}</span>
+                  </div>
+                  <div class="flex items-center justify-between pt-2 border-t border-gray-100 font-semibold">
+                    <span>预计收入</span>
+                    <span class="text-green-600">¥{{ (form.price * 0.8).toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 发布须知 -->
+            <div class="p-6 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100">
+              <h4 class="font-semibold text-amber-800 mb-3">📋 发布须知</h4>
+              <ul class="text-sm text-amber-700 space-y-2">
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-500 mt-0.5">•</span>
+                  <span>模型提交后将进入审核流程，通常在 24 小时内完成</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-500 mt-0.5">•</span>
+                  <span>确保内容原创或已获得授权，禁止抄袭</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-500 mt-0.5">•</span>
+                  <span>模型一经发布，可被其他用户采纳、练习和评价</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="text-amber-500 mt-0.5">•</span>
+                  <span>付费模型的收入将在用户购买后 T+7 日结算</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </ElCard>
+
+        <!-- 底部操作栏 -->
+        <ElCard shadow="hover" class="!rounded-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <ElButton v-if="currentStep === 0" class="!rounded-full" @click="handleCancel">
+                取消
+              </ElButton>
+              <ElButton v-else class="!rounded-full" @click="prevStep">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                上一步
+              </ElButton>
+            </div>
+            <div class="flex items-center gap-3">
+              <ElButton class="!rounded-full" @click="handleSaveDraft">
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                </svg>
+                保存草稿
+              </ElButton>
+              <ElButton
+                v-if="currentStep < 2"
+                type="primary"
+                class="!bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full"
+                @click="nextStep"
+              >
+                下一步
+                <svg class="h-4 w-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </ElButton>
+              <ElButton
+                v-else
+                type="primary"
+                class="!bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full"
+                @click="handleSubmit"
+              >
+                <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                提交审核
+              </ElButton>
+            </div>
+          </div>
+        </ElCard>
       </div>
-    </ElCard>
+
+      <!-- 右侧边栏 -->
+      <div class="w-80 flex-shrink-0 space-y-6 hidden lg:block">
+        <!-- 预览卡片 -->
+        <ElCard shadow="hover" class="!rounded-xl">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">👁️</span>
+              <span class="font-semibold text-gray-700">模型预览</span>
+            </div>
+          </template>
+          <div class="space-y-4">
+            <div class="h-32 rounded-lg overflow-hidden bg-gradient-to-br from-purple-100 to-indigo-100">
+              <img
+                v-if="form.cover"
+                :src="form.cover"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-4xl">
+                🖼️
+              </div>
+            </div>
+            <div>
+              <h4 class="font-semibold text-gray-800 line-clamp-1">
+                {{ form.title || '模型名称' }}
+              </h4>
+              <p class="text-sm text-gray-500 mt-1 line-clamp-2">
+                {{ form.description || '模型描述将显示在这里...' }}
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-1">
+              <span
+                v-for="tag in form.tags.slice(0, 3)"
+                :key="tag"
+                class="px-2 py-0.5 text-xs bg-purple-100 text-purple-600 rounded-full"
+              >
+                {{ tag }}
+              </span>
+              <span v-if="form.tags.length === 0" class="text-xs text-gray-400">暂无标签</span>
+            </div>
+            <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+              <span class="text-sm text-gray-500">
+                {{ categories.find(c => c.value === form.category)?.label || '未选择分类' }}
+              </span>
+              <span
+                :class="[
+                  'px-2 py-0.5 text-sm font-bold rounded-full',
+                  form.isFree ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'
+                ]"
+              >
+                {{ form.isFree ? '免费' : '¥' + form.price }}
+              </span>
+            </div>
+          </div>
+        </ElCard>
+
+        <!-- 创作指南 -->
+        <ElCard shadow="hover" class="!rounded-xl !bg-gradient-to-br from-purple-50 to-indigo-50 !border-purple-100">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📚</span>
+              <span class="font-semibold text-purple-700">创作指南</span>
+            </div>
+          </template>
+          <div class="space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center font-bold text-sm flex-shrink-0">1</div>
+              <div>
+                <div class="font-medium text-gray-700 text-sm">明确用途</div>
+                <div class="text-xs text-gray-500">确定模型解决什么问题</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center font-bold text-sm flex-shrink-0">2</div>
+              <div>
+                <div class="font-medium text-gray-700 text-sm">清晰步骤</div>
+                <div class="text-xs text-gray-500">让用户容易上手</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-purple-200 text-purple-700 flex items-center justify-center font-bold text-sm flex-shrink-0">3</div>
+              <div>
+                <div class="font-medium text-gray-700 text-sm">丰富案例</div>
+                <div class="text-xs text-gray-500">通过实例帮助理解</div>
+              </div>
+            </div>
+          </div>
+        </ElCard>
+
+        <!-- 小贴士 -->
+        <ElCard shadow="hover" class="!rounded-xl !bg-gradient-to-br from-amber-50 to-orange-50 !border-amber-100">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <span class="text-lg">💡</span>
+              <span class="font-semibold text-amber-700">小贴士</span>
+            </div>
+          </template>
+          <ul class="text-sm text-amber-800 space-y-2">
+            <li class="flex items-start gap-2">
+              <span class="text-amber-500">•</span>
+              优质封面图能提升50%点击率
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-amber-500">•</span>
+              3-5个步骤最易被用户接受
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-amber-500">•</span>
+              真实案例更有说服力
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-amber-500">•</span>
+              ¥19-49 是最佳定价区间
+            </li>
+          </ul>
+        </ElCard>
+      </div>
+    </div>
   </Page>
 </template>
 
 <style scoped>
-.cover-uploader :deep(.el-upload) {
-  display: block;
-}
-
-.cover-preview {
-  width: 320px;
-  height: 180px;
-  background-size: cover;
-  background-position: center;
-  border-radius: 8px;
-  cursor: pointer;
-  position: relative;
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.cover-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.cover-preview:hover .cover-overlay {
-  opacity: 1;
-}
-
-.cover-overlay span {
-  color: white;
-  font-size: 14px;
-}
-
-.cover-placeholder {
-  width: 320px;
-  height: 180px;
-  border: 2px dashed #d9d9d9;
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: border-color 0.3s;
-}
-
-.cover-placeholder:hover {
-  border-color: var(--el-color-primary);
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
