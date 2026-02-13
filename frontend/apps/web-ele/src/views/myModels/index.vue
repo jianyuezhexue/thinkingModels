@@ -446,7 +446,7 @@ function formatNumber(num: number): string {
         </div>
 
         <!-- 加载状态 -->
-        <div v-if="loading" class="grid gap-4 sm:grid-cols-2">
+        <div v-if="loading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <ElCard v-for="i in 4" :key="i" shadow="never" class="!rounded-xl">
             <ElSkeleton animated>
               <template #template>
@@ -473,7 +473,7 @@ function formatNumber(num: number): string {
         </ElCard>
 
         <!-- 模型列表 -->
-        <div v-else class="grid gap-4 sm:grid-cols-2">
+        <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div
             v-for="model in models"
             :key="model.id"

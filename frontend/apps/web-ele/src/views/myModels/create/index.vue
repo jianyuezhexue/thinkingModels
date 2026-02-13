@@ -14,6 +14,7 @@ import {
   ElMessage,
   ElUpload,
   ElMessageBox,
+  ElDialog,
 } from 'element-plus';
 import type { UploadProps, UploadFile, FormInstance } from 'element-plus';
 
@@ -83,6 +84,175 @@ const categories = [
 
 // 推荐标签
 const suggestedTags = ['战略', '分析', '思维', '创新', '管理', '决策', '效率', '逻辑', '沟通', '规划'];
+
+// 预设封面图片（来自 Unsplash 免费图库）
+const presetCovers = [
+  // 商业与战略
+  {
+    id: '1',
+    url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop',
+    label: '商业会议',
+    category: 'business',
+  },
+  {
+    id: '2',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
+    label: '团队协作',
+    category: 'business',
+  },
+  {
+    id: '3',
+    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=400&fit=crop',
+    label: '战略规划',
+    category: 'strategy',
+  },
+  {
+    id: '4',
+    url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=400&fit=crop',
+    label: '商务演示',
+    category: 'business',
+  },
+  // 数据与分析
+  {
+    id: '5',
+    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop',
+    label: '数据分析',
+    category: 'analysis',
+  },
+  {
+    id: '6',
+    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
+    label: '图表可视化',
+    category: 'analysis',
+  },
+  {
+    id: '7',
+    url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop',
+    label: '决策分析',
+    category: 'decision',
+  },
+  {
+    id: '8',
+    url: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&h=400&fit=crop',
+    label: '数据仪表盘',
+    category: 'analysis',
+  },
+  // 创意与创新
+  {
+    id: '9',
+    url: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&h=400&fit=crop',
+    label: '创意笔记',
+    category: 'creative',
+  },
+  {
+    id: '10',
+    url: 'https://images.unsplash.com/photo-1512758017271-d7b84c2113f1?w=800&h=400&fit=crop',
+    label: '灵感创意',
+    category: 'creative',
+  },
+  {
+    id: '11',
+    url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=400&fit=crop',
+    label: '头脑风暴',
+    category: 'innovation',
+  },
+  {
+    id: '12',
+    url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=400&fit=crop',
+    label: '科技创新',
+    category: 'innovation',
+  },
+  // 学习与思考
+  {
+    id: '13',
+    url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=400&fit=crop',
+    label: '学习思考',
+    category: 'psychology',
+  },
+  {
+    id: '14',
+    url: 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=800&h=400&fit=crop',
+    label: '专注思考',
+    category: 'psychology',
+  },
+  {
+    id: '15',
+    url: 'https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=800&h=400&fit=crop',
+    label: '阅读研究',
+    category: 'psychology',
+  },
+  {
+    id: '16',
+    url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=400&fit=crop',
+    label: '学习交流',
+    category: 'psychology',
+  },
+  // 沟通与协作
+  {
+    id: '17',
+    url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&h=400&fit=crop',
+    label: '交流讨论',
+    category: 'communication',
+  },
+  {
+    id: '18',
+    url: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&h=400&fit=crop',
+    label: '视频会议',
+    category: 'communication',
+  },
+  {
+    id: '19',
+    url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=400&fit=crop',
+    label: '商务沟通',
+    category: 'communication',
+  },
+  {
+    id: '20',
+    url: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=400&fit=crop',
+    label: '远程协作',
+    category: 'communication',
+  },
+  // 抽象与艺术
+  {
+    id: '21',
+    url: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&h=400&fit=crop',
+    label: '抽象几何',
+    category: 'abstract',
+  },
+  {
+    id: '22',
+    url: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=800&h=400&fit=crop',
+    label: '流体渐变',
+    category: 'abstract',
+  },
+  {
+    id: '23',
+    url: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=400&fit=crop',
+    label: '艺术纹理',
+    category: 'abstract',
+  },
+  {
+    id: '24',
+    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&h=400&fit=crop',
+    label: '彩色渐变',
+    category: 'abstract',
+  },
+];
+
+// 图片选择对话框
+const coverDialogVisible = ref(false);
+
+// 打开图片选择对话框
+function openCoverDialog() {
+  coverDialogVisible.value = true;
+}
+
+// 选择预设封面
+function selectPresetCover(url: string) {
+  form.cover = url;
+  coverDialogVisible.value = false;
+  ElMessage.success('封面已选择');
+}
 
 // 标签输入
 const tagInput = ref('');
@@ -317,32 +487,64 @@ const formProgress = computed(() => {
           <ElForm ref="formRef" :model="form" :rules="rules" label-position="top" class="max-w-2xl">
             <!-- 封面上传 -->
             <ElFormItem label="模型封面">
-              <ElUpload
-                class="w-full"
-                :auto-upload="false"
-                :on-change="handleCoverChange"
-                :show-file-list="false"
-                accept="image/*"
-              >
+              <div class="w-full space-y-3">
+                <!-- 已选封面预览 -->
                 <div
                   v-if="form.cover"
-                  class="relative w-full h-48 rounded-xl overflow-hidden cursor-pointer group"
+                  class="relative w-full h-48 rounded-xl overflow-hidden group"
                 >
                   <img :src="form.cover" class="w-full h-full object-cover" />
-                  <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span class="text-white text-sm">点击更换封面</span>
+                  <div class="absolute inset-0 bg-black/50 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      class="px-4 py-2 bg-white text-gray-700 rounded-full text-sm font-medium hover:bg-purple-50 transition-colors"
+                      @click="openCoverDialog"
+                    >
+                      更换图片
+                    </button>
+                    <button
+                      type="button"
+                      class="px-4 py-2 bg-white/20 text-white rounded-full text-sm font-medium hover:bg-white/30 transition-colors"
+                      @click="form.cover = ''"
+                    >
+                      移除
+                    </button>
                   </div>
                 </div>
-                <div v-else class="w-full h-48 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 transition-colors bg-gray-50">
-                  <div class="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-3">
-                    <svg class="h-8 w-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
+                
+                <!-- 未选封面时的选择区域 -->
+                <div v-else class="w-full">
+                  <!-- 主要区域：选择预设图片 -->
+                  <div
+                    class="w-full h-44 border-2 border-dashed border-purple-200 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-colors bg-purple-50/30 mb-3"
+                    @click="openCoverDialog"
+                  >
+                    <div class="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mb-3">
+                      <svg class="h-7 w-7 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </div>
+                    <p class="text-base text-purple-600 font-medium">点击选择预设图片</p>
+                    <p class="text-xs text-purple-400 mt-1">24张高质量免费图片可选</p>
                   </div>
-                  <p class="text-sm text-gray-500">点击上传封面图片</p>
-                  <p class="text-xs text-gray-400 mt-1">建议尺寸 800×400，支持 JPG、PNG</p>
+                  
+                  <!-- 次要区域：上传自定义图片 -->
+                  <ElUpload
+                    class="w-full"
+                    :auto-upload="false"
+                    :on-change="handleCoverChange"
+                    :show-file-list="false"
+                    accept="image/*"
+                  >
+                    <div class="w-full py-3 border border-gray-200 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:border-purple-300 hover:bg-gray-50 transition-colors">
+                      <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                      </svg>
+                      <span class="text-sm text-gray-500">或上传自定义图片</span>
+                    </div>
+                  </ElUpload>
                 </div>
-              </ElUpload>
+              </div>
             </ElFormItem>
 
             <!-- 模型名称 -->
@@ -833,6 +1035,46 @@ const formProgress = computed(() => {
         </ElCard>
       </div>
     </div>
+    
+    <!-- 封面图片选择对话框 -->
+    <ElDialog
+      v-model="coverDialogVisible"
+      title="选择预设封面"
+      width="900"
+      destroy-on-close
+      :close-on-click-modal="true"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-gray-500">精选 24 张高质量图片来自 Unsplash，可免费使用</p>
+        <div class="grid grid-cols-4 gap-3 max-h-[480px] overflow-y-auto pr-2">
+          <div
+            v-for="cover in presetCovers"
+            :key="cover.id"
+            class="relative h-28 rounded-lg overflow-hidden cursor-pointer group ring-2 ring-transparent hover:ring-purple-400 transition-all"
+            :class="{ 'ring-purple-500': form.cover === cover.url }"
+            @click="selectPresetCover(cover.url)"
+          >
+            <img
+              :src="cover.url"
+              :alt="cover.label"
+              class="w-full h-full object-cover"
+              loading="lazy"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span class="text-white text-xs font-medium">{{ cover.label }}</span>
+            </div>
+            <div
+              v-if="form.cover === cover.url"
+              class="absolute top-2 right-2 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center"
+            >
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ElDialog>
   </Page>
 </template>
 
