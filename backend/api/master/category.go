@@ -21,6 +21,12 @@ func NewCategory() *Category {
 
 // All 获取全量分类列表（按热度降序）
 func (a *Category) All(ctx *gin.Context) {
+	req := &struct{}{}
+	if err := a.Bind(ctx, req); err != nil {
+		a.Error(err)
+		return
+	}
+
 	logic := master.NewCategoryLogic(ctx)
 	res, err := logic.All()
 	if err != nil {
@@ -68,6 +74,12 @@ func (a *Category) Update(ctx *gin.Context) {
 
 // Get 查询分类详情
 func (a *Category) Get(ctx *gin.Context) {
+	req := &struct{}{}
+	if err := a.Bind(ctx, req); err != nil {
+		a.Error(err)
+		return
+	}
+
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {

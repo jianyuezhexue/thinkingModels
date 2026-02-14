@@ -41,8 +41,13 @@ func (a *Base) Success(data interface{}, ext ...any) {
 }
 
 // 绑定参数
-func (a *Base) Bind(ctx *gin.Context, d interface{}, bindings ...binding.Binding) error {
+func (a *Base) Bind(ctx *gin.Context, d any, bindings ...binding.Binding) error {
 	a.Ctx = ctx
+
+	if d == nil {
+		return nil
+	}
+
 	err := a.Ctx.ShouldBind(d)
 	if err != nil {
 		return err

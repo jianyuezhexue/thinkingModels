@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"thinkingModels/api"
-	"thinkingModels/domain/thinking/action"
-	"thinkingModels/logic/thinking"
+	"thinkingModels/domain/practice/action"
+	"thinkingModels/logic/practice"
 
 	"github.com/gin-gonic/gin"
 )

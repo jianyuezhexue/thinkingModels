@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"thinkingModels/domain/market/model"
 	"thinkingModels/domain/subject/analysis"
 	"thinkingModels/logic"
 )
@@ -33,13 +32,6 @@ func (l *AnalysisLogic) Create(req *analysis.CreateAnalysis) (*analysis.CreateAn
 		return nil, errors.New("课题不存在")
 	}
 
-	// 验证思维模型是否存在
-	modelEntity := model.NewModelEntity(l.Ctx)
-	modelData, err := modelEntity.LoadById(req.ModelId)
-	if err != nil {
-		return nil, errors.New("思维模型不存在")
-	}
-
 	// 计算版本号
 	latestVersion := l.getLatestVersion(req.TopicId, req.ModelId)
 	newVersion := latestVersion + 1
@@ -48,7 +40,7 @@ func (l *AnalysisLogic) Create(req *analysis.CreateAnalysis) (*analysis.CreateAn
 	if concreteEntity, ok := entity.(*analysis.AnalysisEntity); ok {
 		concreteEntity.TopicId = req.TopicId
 		concreteEntity.ModelId = req.ModelId
-		concreteEntity.ModelName = modelData.Name // 保存模型名称快照
+		concreteEntity.ModelName = "" // 模型名称快照
 		concreteEntity.Content = req.Content
 		concreteEntity.AiAnalysis = req.AiAnalysis
 		concreteEntity.AiSuggestions = req.AiSuggestions

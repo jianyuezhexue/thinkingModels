@@ -1,17 +1,16 @@
 package subject
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"thinkingModels/component/db"
-	"thinkingModels/domain/market/model"
 	"thinkingModels/domain/subject/analysis"
 	"thinkingModels/domain/subject/topic"
 	"thinkingModels/logic"
+
+	"github.com/gin-gonic/gin"
 )
 
 // TopicLogic 课题业务逻辑
@@ -237,21 +236,9 @@ func (l *TopicLogic) UpdateStatus(req *topic.UpdateTopicStatus) (*topic.TopicInf
 
 // SelectModel 为课题选择思维模型
 func (l *TopicLogic) SelectModel(req *topic.UpdateTopicModel) (*topic.TopicInfo, error) {
-	// 验证模型是否存在
-	modelEntity := model.NewModelEntity(l.Ctx)
-	modelData, err := modelEntity.LoadById(req.ModelId)
-	if err != nil {
-		return nil, errors.New("思维模型不存在")
-	}
-
-	// 检查模型状态
-	if modelData.Status != 1 {
-		return nil, errors.New("该思维模型未发布，无法选用")
-	}
-
 	// 更新课题的模型
 	entity := topic.NewTopicEntity(l.Ctx)
-	_, err = entity.LoadById(req.Id)
+	_, err := entity.LoadById(req.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +325,7 @@ func (l *TopicLogic) Reopen(id uint64) (*topic.TopicInfo, error) {
 	}
 
 	if concreteEntity, ok := entity.(*topic.TopicEntity); ok {
-		concreteEntity.Status = 0 // 进行中
+		concreteEntity.Status = 0                    // 进行中
 		concreteEntity.CompleteTime = db.LocalTime{} // 清空完成时间
 	}
 

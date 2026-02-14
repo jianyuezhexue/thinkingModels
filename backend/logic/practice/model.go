@@ -3,7 +3,7 @@ package thinking
 import (
 	"errors"
 
-	"thinkingModels/domain/thinking/model"
+	"thinkingModels/domain/practice/model"
 	"thinkingModels/logic"
 
 	"github.com/gin-gonic/gin"

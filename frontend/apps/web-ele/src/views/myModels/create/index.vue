@@ -148,19 +148,29 @@
             </ElFormItem>
 
             <!-- 模型分类 -->
-            <ElFormItem label="模型分类" prop="category">
-              <div class="grid grid-cols-4 gap-3">
+            <ElFormItem prop="category">
+              <template #label>
+                <span>模型分类 <span class="text-xs text-gray-400">(已选择 {{ form.category.length }} 个)</span></span>
+              </template>
+              <div v-if="categoriesLoading" class="text-center py-4">
+                <span class="text-gray-500">加载分类中...</span>
+              </div>
+              <div v-else-if="categoriesError" class="text-center py-4">
+                <span class="text-red-500">{{ categoriesError }}</span>
+                <ElButton size="small" @click="loadCategories">重试</ElButton>
+              </div>
+              <div v-else class="grid grid-cols-4 gap-3">
                 <button
                   v-for="cat in categories"
                   :key="cat.value"
                   type="button"
                   class="p-3 rounded-lg border-2 text-center transition-all"
                   :class="[
-                    form.category === cat.value
+                    form.category.includes(cat.value)
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
                       : 'border-gray-200 hover:border-purple-300 text-gray-600'
                   ]"
-                  @click="form.category = cat.value"
+                  @click="toggleCategory(cat.value)"
                 >
                   <div class="text-xl mb-1">{{ cat.icon }}</div>
                   <div class="text-sm font-medium">{{ cat.label }}</div>
@@ -537,7 +547,7 @@
             </div>
             <div class="flex items-center justify-between pt-3 border-t border-gray-100">
               <span class="text-sm text-gray-500">
-                {{ categories.find(c => c.value === form.category)?.label || '未选择分类' }}
+                {{ form.category.length > 0 ? form.category.map(v => categories.find(c => c.value === v)?.label).filter(Boolean).join('、') : '未选择分类' }}
               </span>
               <span
                 :class="[
@@ -675,13 +685,22 @@ import {
   ElMessageBox,
   ElDialog,
 } from 'element-plus';
-import type { UploadProps, UploadFile, FormInstance } from 'element-plus';
+import type { FormInstance } from 'element-plus';
+
+// API
+import { getAllCategoriesApi, type MasterCategoryApi } from '#/api/master/category';
+
+// Store
+import { useResourcesStore } from '#/store/resources';
 
 // 路由
 const route = useRoute();
 const router = useRouter();
 const editId = computed(() => route.query.id as string | undefined);
 const isEdit = computed(() => !!editId.value);
+
+// Store
+const resourcesStore = useResourcesStore();
 
 // 当前步骤
 const currentStep = ref(0);
@@ -695,7 +714,7 @@ const steps = [
 const form = reactive({
   title: '',
   description: '',
-  category: '',
+  category: [] as string[],
   tags: [] as string[],
   cover: '',
   isFree: true,
@@ -725,180 +744,56 @@ const rules = {
     { min: 10, max: 500, message: '描述长度在 10 到 500 个字符', trigger: 'blur' },
   ],
   category: [
-    { required: true, message: '请选择模型分类', trigger: 'change' },
+    { required: true, message: '请至少选择一个模型分类', trigger: 'change' },
+    { type: 'array' as const, min: 1, message: '请至少选择一个分类', trigger: 'change' },
   ],
 };
 
-// 分类选项
-const categories = [
-  { value: 'business', label: '商业管理', icon: '💼' },
-  { value: 'strategy', label: '战略规划', icon: '🎯' },
-  { value: 'innovation', label: '创新思维', icon: '💡' },
-  { value: 'analysis', label: '分析工具', icon: '📊' },
-  { value: 'decision', label: '决策方法', icon: '⚖️' },
-  { value: 'creative', label: '创意构思', icon: '🎨' },
-  { value: 'psychology', label: '心理学', icon: '🧠' },
-  { value: 'communication', label: '沟通表达', icon: '💬' },
-];
+// 从 Store 获取静态资源
+const suggestedTags = computed(() => resourcesStore.suggestedTags);
+const presetCovers = computed(() => resourcesStore.presetCovers);
 
-// 推荐标签
-const suggestedTags = ['战略', '分析', '思维', '创新', '管理', '决策', '效率', '逻辑', '沟通', '规划'];
+// 分类数据（从后端直接获取）
+const categoriesData = ref<MasterCategoryApi.Category[]>([]);
+const categoriesLoading = ref(false);
+const categoriesError = ref<string | null>(null);
 
-// 预设封面图片（来自 Unsplash 免费图库）
-const presetCovers = [
-  // 商业与战略
-  {
-    id: '1',
-    url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop',
-    label: '商业会议',
-    category: 'business',
-  },
-  {
-    id: '2',
-    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
-    label: '团队协作',
-    category: 'business',
-  },
-  {
-    id: '3',
-    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=400&fit=crop',
-    label: '战略规划',
-    category: 'strategy',
-  },
-  {
-    id: '4',
-    url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=400&fit=crop',
-    label: '商务演示',
-    category: 'business',
-  },
-  // 数据与分析
-  {
-    id: '5',
-    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop',
-    label: '数据分析',
-    category: 'analysis',
-  },
-  {
-    id: '6',
-    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
-    label: '图表可视化',
-    category: 'analysis',
-  },
-  {
-    id: '7',
-    url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop',
-    label: '决策分析',
-    category: 'decision',
-  },
-  {
-    id: '8',
-    url: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&h=400&fit=crop',
-    label: '数据仪表盘',
-    category: 'analysis',
-  },
-  // 创意与创新
-  {
-    id: '9',
-    url: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&h=400&fit=crop',
-    label: '创意笔记',
-    category: 'creative',
-  },
-  {
-    id: '10',
-    url: 'https://images.unsplash.com/photo-1512758017271-d7b84c2113f1?w=800&h=400&fit=crop',
-    label: '灵感创意',
-    category: 'creative',
-  },
-  {
-    id: '11',
-    url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=400&fit=crop',
-    label: '头脑风暴',
-    category: 'innovation',
-  },
-  {
-    id: '12',
-    url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=400&fit=crop',
-    label: '科技创新',
-    category: 'innovation',
-  },
-  // 学习与思考
-  {
-    id: '13',
-    url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=400&fit=crop',
-    label: '学习思考',
-    category: 'psychology',
-  },
-  {
-    id: '14',
-    url: 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=800&h=400&fit=crop',
-    label: '专注思考',
-    category: 'psychology',
-  },
-  {
-    id: '15',
-    url: 'https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=800&h=400&fit=crop',
-    label: '阅读研究',
-    category: 'psychology',
-  },
-  {
-    id: '16',
-    url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=400&fit=crop',
-    label: '学习交流',
-    category: 'psychology',
-  },
-  // 沟通与协作
-  {
-    id: '17',
-    url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&h=400&fit=crop',
-    label: '交流讨论',
-    category: 'communication',
-  },
-  {
-    id: '18',
-    url: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&h=400&fit=crop',
-    label: '视频会议',
-    category: 'communication',
-  },
-  {
-    id: '19',
-    url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=400&fit=crop',
-    label: '商务沟通',
-    category: 'communication',
-  },
-  {
-    id: '20',
-    url: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=400&fit=crop',
-    label: '远程协作',
-    category: 'communication',
-  },
-  // 抽象与艺术
-  {
-    id: '21',
-    url: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&h=400&fit=crop',
-    label: '抽象几何',
-    category: 'abstract',
-  },
-  {
-    id: '22',
-    url: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=800&h=400&fit=crop',
-    label: '流体渐变',
-    category: 'abstract',
-  },
-  {
-    id: '23',
-    url: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=400&fit=crop',
-    label: '艺术纹理',
-    category: 'abstract',
-  },
-  {
-    id: '24',
-    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&h=400&fit=crop',
-    label: '彩色渐变',
-    category: 'abstract',
-  },
-];
+// 分类选项（转换后的格式）
+const categories = computed(() =>
+  categoriesData.value.map((cat) => ({
+    value: String(cat.id),
+    label: cat.name,
+    icon: cat.icon || '📦',
+  })),
+);
 
-// 提交加载状态
+// 加载分类列表
+async function loadCategories() {
+  if (categoriesData.value.length > 0) return;
+
+  categoriesLoading.value = true;
+  categoriesError.value = null;
+
+  try {
+    const res = await getAllCategoriesApi();
+    categoriesData.value = res;
+  } catch (error: any) {
+    categoriesError.value = error.message || '加载分类失败';
+    console.error('加载分类失败:', error);
+  } finally {
+    categoriesLoading.value = false;
+  }
+}
+
+// 分类选择切换
+function toggleCategory(value: string) {
+  const index = form.category.indexOf(value);
+  if (index > -1) {
+    form.category.splice(index, 1);
+  } else {
+    form.category.push(value);
+  }
+}
 const submitLoading = ref(false);
 
 // 图片选择对话框
@@ -920,14 +815,17 @@ function selectPresetCover(url: string) {
 const tagInput = ref('');
 const tagInputVisible = ref(false);
 
-// 加载编辑数据
+// 加载数据
 onMounted(async () => {
+  // 加载分类数据
+  await loadCategories();
+
   if (isEdit.value) {
     // 模拟加载编辑数据
     await new Promise(resolve => setTimeout(resolve, 500));
     form.title = 'SWOT 分析思维模型';
     form.description = '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁。';
-    form.category = 'business';
+    form.category = ['business', 'strategy'];
     form.tags = ['战略', '分析', '商业'];
     form.isFree = false;
     form.price = 29;
@@ -1042,7 +940,7 @@ async function handleSubmit() {
       name: form.title,
       code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
       description: form.description,
-      category_id: parseInt(form.category) || 1,
+      category_id: form.category[0] ? parseInt(form.category[0]) : 1,
       difficulty: 2, // 默认难度：1=简单 2=中等 3=困难
       estimated_time: 30, // 默认预估时间（分钟）
       tags: form.tags,
@@ -1088,7 +986,7 @@ async function handleSaveDraft() {
       name: form.title,
       code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
       description: form.description,
-      category_id: parseInt(form.category) || 1,
+      category_id: form.category[0] ? parseInt(form.category[0]) : 1,
       difficulty: 2,
       estimated_time: 30,
       tags: form.tags,
@@ -1126,17 +1024,6 @@ function handleCancel() {
   router.back();
 }
 
-// 封面上传
-const handleCoverChange: UploadProps['onChange'] = (uploadFile: UploadFile) => {
-  if (uploadFile.raw) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      form.cover = e.target?.result as string;
-    };
-    reader.readAsDataURL(uploadFile.raw);
-  }
-};
-
 // 计算完成进度
 const formProgress = computed(() => {
   let filled = 0;
@@ -1144,7 +1031,7 @@ const formProgress = computed(() => {
   
   if (form.title) filled++;
   if (form.description) filled++;
-  if (form.category) filled++;
+  if (form.category.length > 0) filled++;
   if (form.tags.length > 0) filled++;
   if (form.content.overview) filled++;
   if (form.content.steps.some(s => s.title && s.description)) filled++;

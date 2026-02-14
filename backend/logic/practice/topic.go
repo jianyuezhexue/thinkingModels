@@ -1,7 +1,7 @@
 package thinking
 
 import (
-	"thinkingModels/domain/thinking/topic"
+	"thinkingModels/domain/practice/topic"
 	"thinkingModels/logic"
 
 	"github.com/gin-gonic/gin"
