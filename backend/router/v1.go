@@ -58,21 +58,17 @@ func AuthorizedRouters() {
 		modelGroup.POST("/unpublish", modelApi.Unpublish)
 		modelGroup.POST("/status", modelApi.UpdateStatus)
 
+		// ==================== 主数据模块 (Master) ====================
 		// 模型分类管理
-		categoryApi := market.NewCategory()
-		categoryGroup := api.Group("/market/category")
-		// 注意：具体路由必须放在参数路由（/:id）之前
-		categoryGroup.GET("/list", categoryApi.List)
-		categoryGroup.GET("/tree", categoryApi.Tree)
-		categoryGroup.GET("/tree/all", categoryApi.TreeWithRoot)
-		categoryGroup.GET("/children/:id", categoryApi.Children)
-		categoryGroup.GET("/path/:id", categoryApi.Path)
-		categoryGroup.POST("/move", categoryApi.Move)
-		categoryGroup.POST("/status", categoryApi.UpdateStatus)
-		categoryGroup.POST("", categoryApi.Create)
-		categoryGroup.PUT("", categoryApi.Update)
-		categoryGroup.GET("/:id", categoryApi.Get)
-		categoryGroup.DELETE("", categoryApi.Del)
+		masterCategoryApi := master.NewCategory()
+		masterCategoryGroup := api.Group("/master/category")
+		masterCategoryGroup.GET("/all", masterCategoryApi.All)     // 全量列表（按热度降序）
+		masterCategoryGroup.GET("/list", masterCategoryApi.List)   // 分页列表
+		masterCategoryGroup.POST("", masterCategoryApi.Create)     // 新建分类
+		masterCategoryGroup.PUT("", masterCategoryApi.Update)    // 更新分类
+		masterCategoryGroup.GET("/:id", masterCategoryApi.Get)     // 查询详情
+		masterCategoryGroup.DELETE("", masterCategoryApi.Del)     // 删除分类
+		masterCategoryGroup.POST("/increaseHeat", masterCategoryApi.IncreaseHeat) // 增加热度
 
 		// ==================== 课题管理模块 ====================
 		// 课题管理
