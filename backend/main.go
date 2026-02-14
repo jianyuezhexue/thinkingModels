@@ -25,6 +25,7 @@ import (
 // @description JWT token认证，格式：Bearer {token}
 
 // apifox token = afxp_731980BYiStMxas7r5wJnWXl5thuEaPchjfg
+// 项目ID = 7838366
 func main() {
 	// 启动服务
 	engine.Run()

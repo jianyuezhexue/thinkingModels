@@ -1,0 +1,68 @@
+name: Sync API to Apifox
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/api/**'
+      - 'backend/domain/**'
+      - 'backend/router/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/api/**'
+      - 'backend/domain/**'
+      - 'backend/router/**'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  generate-and-sync:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate Swagger
+        run: swag init --parseDependency --parseInternal
+
+      - name: Upload Swagger as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: swagger-docs
+          path: backend/docs/swagger.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Apifox CLI
+        run: npm install -g apifox-cli
+
+      - name: Sync to Apifox
+        env:
+          APIFOX_TOKEN: ${{ secrets.APIFOX_TOKEN }}
+        run: |
+          apifox-cli import \
+            --token "$APIFOX_TOKEN" \
+            --project-id 7838366 \
+            --file docs/swagger.json \
+            --format swagger \
+            --mode merge
+
+      - name: Sync Summary
+        run: |
+          echo "✅ Swagger 文档已同步到 Apifox"
+          echo "项目链接: https://app.apifox.com/project/7838366"
