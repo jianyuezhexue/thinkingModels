@@ -1,426 +1,3 @@
-<script lang="ts" setup>
-import { ref, reactive, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
-import { Page } from '@vben/common-ui';
-
-import {
-  ElButton,
-  ElCard,
-  ElInput,
-  ElForm,
-  ElFormItem,
-  ElTag,
-  ElMessage,
-  // ElUpload,
-  ElMessageBox,
-  ElDialog,
-} from 'element-plus';
-import type { UploadProps, UploadFile, FormInstance } from 'element-plus';
-
-// 路由
-const route = useRoute();
-const router = useRouter();
-const editId = computed(() => route.query.id as string | undefined);
-const isEdit = computed(() => !!editId.value);
-
-// 当前步骤
-const currentStep = ref(0);
-const steps = [
-  { id: 0, label: '基本信息', icon: '📋', description: '模型名称、分类、简介' },
-  { id: 1, label: '内容编辑', icon: '📝', description: '使用步骤和案例' },
-  { id: 2, label: '发布设置', icon: '🚀', description: '定价和发布选项' },
-];
-
-// 表单数据
-const form = reactive({
-  title: '',
-  description: '',
-  category: '',
-  tags: [] as string[],
-  cover: '',
-  isFree: true,
-  price: 29,
-  content: {
-    overview: '',
-    steps: [
-      { title: '', description: '' },
-    ],
-    examples: [
-      { title: '', content: '' },
-    ],
-  },
-});
-
-// 表单引用
-const formRef = ref<FormInstance>();
-
-// 表单校验规则
-const rules = {
-  title: [
-    { required: true, message: '请输入模型名称', trigger: 'blur' },
-    { min: 2, max: 50, message: '名称长度在 2 到 50 个字符', trigger: 'blur' },
-  ],
-  description: [
-    { required: true, message: '请输入模型描述', trigger: 'blur' },
-    { min: 10, max: 500, message: '描述长度在 10 到 500 个字符', trigger: 'blur' },
-  ],
-  category: [
-    { required: true, message: '请选择模型分类', trigger: 'change' },
-  ],
-};
-
-// 分类选项
-const categories = [
-  { value: 'business', label: '商业管理', icon: '💼' },
-  { value: 'strategy', label: '战略规划', icon: '🎯' },
-  { value: 'innovation', label: '创新思维', icon: '💡' },
-  { value: 'analysis', label: '分析工具', icon: '📊' },
-  { value: 'decision', label: '决策方法', icon: '⚖️' },
-  { value: 'creative', label: '创意构思', icon: '🎨' },
-  { value: 'psychology', label: '心理学', icon: '🧠' },
-  { value: 'communication', label: '沟通表达', icon: '💬' },
-];
-
-// 推荐标签
-const suggestedTags = ['战略', '分析', '思维', '创新', '管理', '决策', '效率', '逻辑', '沟通', '规划'];
-
-// 预设封面图片（来自 Unsplash 免费图库）
-const presetCovers = [
-  // 商业与战略
-  {
-    id: '1',
-    url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop',
-    label: '商业会议',
-    category: 'business',
-  },
-  {
-    id: '2',
-    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
-    label: '团队协作',
-    category: 'business',
-  },
-  {
-    id: '3',
-    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=400&fit=crop',
-    label: '战略规划',
-    category: 'strategy',
-  },
-  {
-    id: '4',
-    url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=400&fit=crop',
-    label: '商务演示',
-    category: 'business',
-  },
-  // 数据与分析
-  {
-    id: '5',
-    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop',
-    label: '数据分析',
-    category: 'analysis',
-  },
-  {
-    id: '6',
-    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
-    label: '图表可视化',
-    category: 'analysis',
-  },
-  {
-    id: '7',
-    url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop',
-    label: '决策分析',
-    category: 'decision',
-  },
-  {
-    id: '8',
-    url: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&h=400&fit=crop',
-    label: '数据仪表盘',
-    category: 'analysis',
-  },
-  // 创意与创新
-  {
-    id: '9',
-    url: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&h=400&fit=crop',
-    label: '创意笔记',
-    category: 'creative',
-  },
-  {
-    id: '10',
-    url: 'https://images.unsplash.com/photo-1512758017271-d7b84c2113f1?w=800&h=400&fit=crop',
-    label: '灵感创意',
-    category: 'creative',
-  },
-  {
-    id: '11',
-    url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=400&fit=crop',
-    label: '头脑风暴',
-    category: 'innovation',
-  },
-  {
-    id: '12',
-    url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=400&fit=crop',
-    label: '科技创新',
-    category: 'innovation',
-  },
-  // 学习与思考
-  {
-    id: '13',
-    url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=400&fit=crop',
-    label: '学习思考',
-    category: 'psychology',
-  },
-  {
-    id: '14',
-    url: 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=800&h=400&fit=crop',
-    label: '专注思考',
-    category: 'psychology',
-  },
-  {
-    id: '15',
-    url: 'https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=800&h=400&fit=crop',
-    label: '阅读研究',
-    category: 'psychology',
-  },
-  {
-    id: '16',
-    url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=400&fit=crop',
-    label: '学习交流',
-    category: 'psychology',
-  },
-  // 沟通与协作
-  {
-    id: '17',
-    url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&h=400&fit=crop',
-    label: '交流讨论',
-    category: 'communication',
-  },
-  {
-    id: '18',
-    url: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&h=400&fit=crop',
-    label: '视频会议',
-    category: 'communication',
-  },
-  {
-    id: '19',
-    url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=400&fit=crop',
-    label: '商务沟通',
-    category: 'communication',
-  },
-  {
-    id: '20',
-    url: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=400&fit=crop',
-    label: '远程协作',
-    category: 'communication',
-  },
-  // 抽象与艺术
-  {
-    id: '21',
-    url: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&h=400&fit=crop',
-    label: '抽象几何',
-    category: 'abstract',
-  },
-  {
-    id: '22',
-    url: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=800&h=400&fit=crop',
-    label: '流体渐变',
-    category: 'abstract',
-  },
-  {
-    id: '23',
-    url: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=400&fit=crop',
-    label: '艺术纹理',
-    category: 'abstract',
-  },
-  {
-    id: '24',
-    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&h=400&fit=crop',
-    label: '彩色渐变',
-    category: 'abstract',
-  },
-];
-
-// 图片选择对话框
-const coverDialogVisible = ref(false);
-
-// 打开图片选择对话框
-function openCoverDialog() {
-  coverDialogVisible.value = true;
-}
-
-// 选择预设封面
-function selectPresetCover(url: string) {
-  form.cover = url;
-  coverDialogVisible.value = false;
-  ElMessage.success('封面已选择');
-}
-
-// 标签输入
-const tagInput = ref('');
-const tagInputVisible = ref(false);
-
-// 加载编辑数据
-onMounted(async () => {
-  if (isEdit.value) {
-    // 模拟加载编辑数据
-    await new Promise(resolve => setTimeout(resolve, 500));
-    form.title = 'SWOT 分析思维模型';
-    form.description = '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁。';
-    form.category = 'business';
-    form.tags = ['战略', '分析', '商业'];
-    form.isFree = false;
-    form.price = 29;
-    form.content.overview = 'SWOT 分析是一种战略规划工具...';
-    form.content.steps = [
-      { title: '识别优势', description: '列出相对于竞争对手的优势...' },
-      { title: '识别劣势', description: '诚实地列出需要改进的领域...' },
-    ];
-    form.content.examples = [
-      { title: '电商平台案例', content: '优势：用户基础庞大...' },
-    ];
-  }
-});
-
-// 标签操作
-function handleAddTag() {
-  const tag = tagInput.value.trim();
-  if (tag && !form.tags.includes(tag) && form.tags.length < 5) {
-    form.tags.push(tag);
-  }
-  tagInput.value = '';
-  tagInputVisible.value = false;
-}
-
-function handleRemoveTag(tag: string) {
-  form.tags = form.tags.filter(t => t !== tag);
-}
-
-function addSuggestedTag(tag: string) {
-  if (!form.tags.includes(tag) && form.tags.length < 5) {
-    form.tags.push(tag);
-  }
-}
-
-// 步骤操作
-function addStep() {
-  form.content.steps.push({ title: '', description: '' });
-}
-
-function removeStep(index: number) {
-  if (form.content.steps.length > 1) {
-    form.content.steps.splice(index, 1);
-  }
-}
-
-// 案例操作
-function addExample() {
-  form.content.examples.push({ title: '', content: '' });
-}
-
-function removeExample(index: number) {
-  if (form.content.examples.length > 1) {
-    form.content.examples.splice(index, 1);
-  }
-}
-
-// 步骤导航
-async function goToStep(step: number) {
-  if (step < currentStep.value) {
-    currentStep.value = step;
-    return;
-  }
-  
-  // 验证当前步骤
-  if (currentStep.value === 0) {
-    try {
-      await formRef.value?.validate();
-    } catch {
-      ElMessage.warning('请完善基本信息');
-      return;
-    }
-  }
-  
-  if (currentStep.value === 1) {
-    if (!form.content.overview.trim()) {
-      ElMessage.warning('请填写模型概述');
-      return;
-    }
-    const hasValidStep = form.content.steps.some(s => s.title.trim() && s.description.trim());
-    if (!hasValidStep) {
-      ElMessage.warning('请至少添加一个完整的使用步骤');
-      return;
-    }
-  }
-  
-  currentStep.value = step;
-}
-
-function prevStep() {
-  if (currentStep.value > 0) {
-    currentStep.value--;
-  }
-}
-
-async function nextStep() {
-  await goToStep(currentStep.value + 1);
-}
-
-// 提交
-async function handleSubmit() {
-  try {
-    await ElMessageBox.confirm(
-      '提交后模型将进入审核流程，审核通过后将发布到市场。确定提交吗？',
-      '提交审核',
-      { type: 'info' }
-    );
-    // TODO: 调用 API
-    ElMessage.success(isEdit.value ? '模型已更新并提交审核' : '模型已创建并提交审核');
-    router.push('/my-models');
-  } catch {
-    // 用户取消
-  }
-}
-
-// 保存草稿
-async function handleSaveDraft() {
-  // TODO: 调用 API
-  ElMessage.success('草稿已保存');
-  router.push('/my-models');
-}
-
-// 取消
-function handleCancel() {
-  router.back();
-}
-
-// 封面上传
-const handleCoverChange: UploadProps['onChange'] = (uploadFile: UploadFile) => {
-  if (uploadFile.raw) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      form.cover = e.target?.result as string;
-    };
-    reader.readAsDataURL(uploadFile.raw);
-  }
-};
-
-// 计算完成进度
-const formProgress = computed(() => {
-  let filled = 0;
-  let total = 8;
-  
-  if (form.title) filled++;
-  if (form.description) filled++;
-  if (form.category) filled++;
-  if (form.tags.length > 0) filled++;
-  if (form.content.overview) filled++;
-  if (form.content.steps.some(s => s.title && s.description)) filled++;
-  if (form.content.examples.some(e => e.title && e.content)) filled++;
-  if (form.cover) filled++;
-  
-  return Math.round((filled / total) * 100);
-});
-</script>
-
 <template>
   <Page
     :description="isEdit ? '修改模型内容和设置' : '创建并分享你的思维模型'"
@@ -483,7 +60,7 @@ const formProgress = computed(() => {
               <span class="font-semibold text-gray-700">基本信息</span>
             </div>
           </template>
-          
+
           <ElForm ref="formRef" :model="form" :rules="rules" label-position="top" class="max-w-2xl">
             <!-- 封面上传 -->
             <ElFormItem label="模型封面">
@@ -511,7 +88,7 @@ const formProgress = computed(() => {
                     </button>
                   </div>
                 </div>
-                
+
                 <!-- 未选封面时的选择区域 -->
                 <div v-else class="w-full">
                   <!-- 主要区域：选择预设图片 -->
@@ -527,7 +104,7 @@ const formProgress = computed(() => {
                     <p class="text-base text-purple-600 font-medium">点击选择预设图片</p>
                     <p class="text-xs text-purple-400 mt-1">24张高质量免费图片可选</p>
                   </div>
-                  
+
                   <!-- 次要区域：上传自定义图片 -->
                   <!-- <ElUpload
                     class="w-full"
@@ -800,7 +377,7 @@ const formProgress = computed(() => {
                   <div class="text-xs text-gray-400">知识变现</div>
                 </button>
               </div>
-              
+
               <div v-if="!form.isFree" class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">设置价格</label>
@@ -907,6 +484,7 @@ const formProgress = computed(() => {
                 type="primary"
                 class="!bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full"
                 @click="handleSubmit"
+                :loading="submitLoading"
               >
                 <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
@@ -1035,7 +613,7 @@ const formProgress = computed(() => {
         </ElCard>
       </div>
     </div>
-    
+
     <!-- 封面图片选择对话框 -->
     <ElDialog
       v-model="coverDialogVisible"
@@ -1077,6 +655,505 @@ const formProgress = computed(() => {
     </ElDialog>
   </Page>
 </template>
+
+<script lang="ts" setup>
+import { ref, reactive, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+import { Page } from '@vben/common-ui';
+import { requestClient } from '#/api/request';
+
+import {
+  ElButton,
+  ElCard,
+  ElInput,
+  ElForm,
+  ElFormItem,
+  ElTag,
+  ElMessage,
+  // ElUpload,
+  ElMessageBox,
+  ElDialog,
+} from 'element-plus';
+import type { UploadProps, UploadFile, FormInstance } from 'element-plus';
+
+// 路由
+const route = useRoute();
+const router = useRouter();
+const editId = computed(() => route.query.id as string | undefined);
+const isEdit = computed(() => !!editId.value);
+
+// 当前步骤
+const currentStep = ref(0);
+const steps = [
+  { id: 0, label: '基本信息', icon: '📋', description: '模型名称、分类、简介' },
+  { id: 1, label: '内容编辑', icon: '📝', description: '使用步骤和案例' },
+  { id: 2, label: '发布设置', icon: '🚀', description: '定价和发布选项' },
+];
+
+// 表单数据
+const form = reactive({
+  title: '',
+  description: '',
+  category: '',
+  tags: [] as string[],
+  cover: '',
+  isFree: true,
+  price: 29,
+  content: {
+    overview: '',
+    steps: [
+      { title: '', description: '' },
+    ],
+    examples: [
+      { title: '', content: '' },
+    ],
+  },
+});
+
+// 表单引用
+const formRef = ref<FormInstance>();
+
+// 表单校验规则
+const rules = {
+  title: [
+    { required: true, message: '请输入模型名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '名称长度在 2 到 50 个字符', trigger: 'blur' },
+  ],
+  description: [
+    { required: true, message: '请输入模型描述', trigger: 'blur' },
+    { min: 10, max: 500, message: '描述长度在 10 到 500 个字符', trigger: 'blur' },
+  ],
+  category: [
+    { required: true, message: '请选择模型分类', trigger: 'change' },
+  ],
+};
+
+// 分类选项
+const categories = [
+  { value: 'business', label: '商业管理', icon: '💼' },
+  { value: 'strategy', label: '战略规划', icon: '🎯' },
+  { value: 'innovation', label: '创新思维', icon: '💡' },
+  { value: 'analysis', label: '分析工具', icon: '📊' },
+  { value: 'decision', label: '决策方法', icon: '⚖️' },
+  { value: 'creative', label: '创意构思', icon: '🎨' },
+  { value: 'psychology', label: '心理学', icon: '🧠' },
+  { value: 'communication', label: '沟通表达', icon: '💬' },
+];
+
+// 推荐标签
+const suggestedTags = ['战略', '分析', '思维', '创新', '管理', '决策', '效率', '逻辑', '沟通', '规划'];
+
+// 预设封面图片（来自 Unsplash 免费图库）
+const presetCovers = [
+  // 商业与战略
+  {
+    id: '1',
+    url: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop',
+    label: '商业会议',
+    category: 'business',
+  },
+  {
+    id: '2',
+    url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
+    label: '团队协作',
+    category: 'business',
+  },
+  {
+    id: '3',
+    url: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&h=400&fit=crop',
+    label: '战略规划',
+    category: 'strategy',
+  },
+  {
+    id: '4',
+    url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=800&h=400&fit=crop',
+    label: '商务演示',
+    category: 'business',
+  },
+  // 数据与分析
+  {
+    id: '5',
+    url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop',
+    label: '数据分析',
+    category: 'analysis',
+  },
+  {
+    id: '6',
+    url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop',
+    label: '图表可视化',
+    category: 'analysis',
+  },
+  {
+    id: '7',
+    url: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop',
+    label: '决策分析',
+    category: 'decision',
+  },
+  {
+    id: '8',
+    url: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&h=400&fit=crop',
+    label: '数据仪表盘',
+    category: 'analysis',
+  },
+  // 创意与创新
+  {
+    id: '9',
+    url: 'https://images.unsplash.com/photo-1507925921958-8a62f3d1a50d?w=800&h=400&fit=crop',
+    label: '创意笔记',
+    category: 'creative',
+  },
+  {
+    id: '10',
+    url: 'https://images.unsplash.com/photo-1512758017271-d7b84c2113f1?w=800&h=400&fit=crop',
+    label: '灵感创意',
+    category: 'creative',
+  },
+  {
+    id: '11',
+    url: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=400&fit=crop',
+    label: '头脑风暴',
+    category: 'innovation',
+  },
+  {
+    id: '12',
+    url: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800&h=400&fit=crop',
+    label: '科技创新',
+    category: 'innovation',
+  },
+  // 学习与思考
+  {
+    id: '13',
+    url: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&h=400&fit=crop',
+    label: '学习思考',
+    category: 'psychology',
+  },
+  {
+    id: '14',
+    url: 'https://images.unsplash.com/photo-1493612276216-ee3925520721?w=800&h=400&fit=crop',
+    label: '专注思考',
+    category: 'psychology',
+  },
+  {
+    id: '15',
+    url: 'https://images.unsplash.com/photo-1456324504439-367cee3b3c32?w=800&h=400&fit=crop',
+    label: '阅读研究',
+    category: 'psychology',
+  },
+  {
+    id: '16',
+    url: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=400&fit=crop',
+    label: '学习交流',
+    category: 'psychology',
+  },
+  // 沟通与协作
+  {
+    id: '17',
+    url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&h=400&fit=crop',
+    label: '交流讨论',
+    category: 'communication',
+  },
+  {
+    id: '18',
+    url: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800&h=400&fit=crop',
+    label: '视频会议',
+    category: 'communication',
+  },
+  {
+    id: '19',
+    url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=400&fit=crop',
+    label: '商务沟通',
+    category: 'communication',
+  },
+  {
+    id: '20',
+    url: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=800&h=400&fit=crop',
+    label: '远程协作',
+    category: 'communication',
+  },
+  // 抽象与艺术
+  {
+    id: '21',
+    url: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&h=400&fit=crop',
+    label: '抽象几何',
+    category: 'abstract',
+  },
+  {
+    id: '22',
+    url: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?w=800&h=400&fit=crop',
+    label: '流体渐变',
+    category: 'abstract',
+  },
+  {
+    id: '23',
+    url: 'https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=800&h=400&fit=crop',
+    label: '艺术纹理',
+    category: 'abstract',
+  },
+  {
+    id: '24',
+    url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=800&h=400&fit=crop',
+    label: '彩色渐变',
+    category: 'abstract',
+  },
+];
+
+// 提交加载状态
+const submitLoading = ref(false);
+
+// 图片选择对话框
+const coverDialogVisible = ref(false);
+
+// 打开图片选择对话框
+function openCoverDialog() {
+  coverDialogVisible.value = true;
+}
+
+// 选择预设封面
+function selectPresetCover(url: string) {
+  form.cover = url;
+  coverDialogVisible.value = false;
+  ElMessage.success('封面已选择');
+}
+
+// 标签输入
+const tagInput = ref('');
+const tagInputVisible = ref(false);
+
+// 加载编辑数据
+onMounted(async () => {
+  if (isEdit.value) {
+    // 模拟加载编辑数据
+    await new Promise(resolve => setTimeout(resolve, 500));
+    form.title = 'SWOT 分析思维模型';
+    form.description = '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁。';
+    form.category = 'business';
+    form.tags = ['战略', '分析', '商业'];
+    form.isFree = false;
+    form.price = 29;
+    form.content.overview = 'SWOT 分析是一种战略规划工具...';
+    form.content.steps = [
+      { title: '识别优势', description: '列出相对于竞争对手的优势...' },
+      { title: '识别劣势', description: '诚实地列出需要改进的领域...' },
+    ];
+    form.content.examples = [
+      { title: '电商平台案例', content: '优势：用户基础庞大...' },
+    ];
+  }
+});
+
+// 标签操作
+function handleAddTag() {
+  const tag = tagInput.value.trim();
+  if (tag && !form.tags.includes(tag) && form.tags.length < 5) {
+    form.tags.push(tag);
+  }
+  tagInput.value = '';
+  tagInputVisible.value = false;
+}
+
+function handleRemoveTag(tag: string) {
+  form.tags = form.tags.filter(t => t !== tag);
+}
+
+function addSuggestedTag(tag: string) {
+  if (!form.tags.includes(tag) && form.tags.length < 5) {
+    form.tags.push(tag);
+  }
+}
+
+// 步骤操作
+function addStep() {
+  form.content.steps.push({ title: '', description: '' });
+}
+
+function removeStep(index: number) {
+  if (form.content.steps.length > 1) {
+    form.content.steps.splice(index, 1);
+  }
+}
+
+// 案例操作
+function addExample() {
+  form.content.examples.push({ title: '', content: '' });
+}
+
+function removeExample(index: number) {
+  if (form.content.examples.length > 1) {
+    form.content.examples.splice(index, 1);
+  }
+}
+
+// 步骤导航
+async function goToStep(step: number) {
+  if (step < currentStep.value) {
+    currentStep.value = step;
+    return;
+  }
+  
+  // 验证当前步骤
+  if (currentStep.value === 0) {
+    try {
+      await formRef.value?.validate();
+    } catch {
+      ElMessage.warning('请完善基本信息');
+      return;
+    }
+  }
+  
+  if (currentStep.value === 1) {
+    if (!form.content.overview.trim()) {
+      ElMessage.warning('请填写模型概述');
+      return;
+    }
+    const hasValidStep = form.content.steps.some(s => s.title.trim() && s.description.trim());
+    if (!hasValidStep) {
+      ElMessage.warning('请至少添加一个完整的使用步骤');
+      return;
+    }
+  }
+  
+  currentStep.value = step;
+}
+
+function prevStep() {
+  if (currentStep.value > 0) {
+    currentStep.value--;
+  }
+}
+
+async function nextStep() {
+  await goToStep(currentStep.value + 1);
+}
+
+// 提交
+async function handleSubmit() {
+  try {
+    await ElMessageBox.confirm(
+      '提交后模型将进入审核流程，审核通过后将发布到市场。确定提交吗？',
+      '提交审核',
+      { type: 'info' }
+    );
+
+    submitLoading.value = true;
+
+    // 构建提交数据（字段名与后端 Go struct 对应）
+    const submitData = {
+      name: form.title,
+      code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
+      description: form.description,
+      category_id: parseInt(form.category) || 1,
+      difficulty: 2, // 默认难度：1=简单 2=中等 3=困难
+      estimated_time: 30, // 默认预估时间（分钟）
+      tags: form.tags,
+      cover_image: form.cover,
+      content: JSON.stringify({
+        overview: form.content.overview,
+        steps: form.content.steps.filter(s => s.title.trim() || s.description.trim()),
+        examples: form.content.examples.filter(e => e.title.trim() || e.content.trim()),
+      }),
+      is_free: form.isFree,
+      price: form.isFree ? 0 : form.price,
+    };
+
+    if (isEdit.value && editId.value) {
+      // 编辑模式 - 更新模型并提交审核
+      await requestClient.post(`/thinking/model/${editId.value}/publish`, submitData);
+      ElMessage.success('模型已更新并提交审核');
+    } else {
+      // 创建模式 - 创建模型并提交审核
+      await requestClient.post('/thinking/model', submitData);
+      ElMessage.success('模型已创建并提交审核');
+    }
+
+    router.push('/my-models');
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      // 不是用户取消，显示错误信息
+      const errorMsg = error?.response?.data?.message || error?.message || '提交失败，请重试';
+      ElMessage.error(errorMsg);
+    }
+  } finally {
+    submitLoading.value = false;
+  }
+}
+
+// 保存草稿
+async function handleSaveDraft() {
+  try {
+    submitLoading.value = true;
+
+    // 构建草稿数据（字段名与后端 Go struct 对应）
+    const draftData = {
+      name: form.title,
+      code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
+      description: form.description,
+      category_id: parseInt(form.category) || 1,
+      difficulty: 2,
+      estimated_time: 30,
+      tags: form.tags,
+      cover_image: form.cover,
+      content: JSON.stringify({
+        overview: form.content.overview,
+        steps: form.content.steps.filter(s => s.title.trim() || s.description.trim()),
+        examples: form.content.examples.filter(e => e.title.trim() || e.content.trim()),
+      }),
+      is_free: form.isFree,
+      price: form.isFree ? 0 : form.price,
+      status: 'draft',
+    };
+
+    if (isEdit.value && editId.value) {
+      // 编辑模式 - 更新草稿
+      await requestClient.put(`/thinking/model/${editId.value}`, draftData);
+    } else {
+      // 创建模式 - 创建草稿
+      await requestClient.post('/thinking/model', draftData);
+    }
+
+    ElMessage.success('草稿已保存');
+    router.push('/my-models');
+  } catch (error: any) {
+    const errorMsg = error?.response?.data?.message || error?.message || '保存失败，请重试';
+    ElMessage.error(errorMsg);
+  } finally {
+    submitLoading.value = false;
+  }
+}
+
+// 取消
+function handleCancel() {
+  router.back();
+}
+
+// 封面上传
+const handleCoverChange: UploadProps['onChange'] = (uploadFile: UploadFile) => {
+  if (uploadFile.raw) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      form.cover = e.target?.result as string;
+    };
+    reader.readAsDataURL(uploadFile.raw);
+  }
+};
+
+// 计算完成进度
+const formProgress = computed(() => {
+  let filled = 0;
+  let total = 8;
+  
+  if (form.title) filled++;
+  if (form.description) filled++;
+  if (form.category) filled++;
+  if (form.tags.length > 0) filled++;
+  if (form.content.overview) filled++;
+  if (form.content.steps.some(s => s.title && s.description)) filled++;
+  if (form.content.examples.some(e => e.title && e.content)) filled++;
+  if (form.cover) filled++;
+  
+  return Math.round((filled / total) * 100);
+});
+</script>
 
 <style scoped>
 .line-clamp-1 {
