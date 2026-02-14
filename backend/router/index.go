@@ -3,6 +3,10 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 	"thinkingModels/middleware"
+
+	_ "thinkingModels/docs"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
 )
 
 var Routers = make([]func(router *gin.Engine), 0)
@@ -12,6 +16,9 @@ func InitRouter(router *gin.Engine) {
 
 	// 全局中间件 | 允许跨域
 	router.Use(middleware.Cors()).Use(middleware.UserInfo())
+
+	// Swagger API 文档路由
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 代码自动生成路由
 	genCodeRouters()

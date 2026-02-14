@@ -19,6 +19,17 @@ func NewModel() *Model {
 }
 
 // Create 创建思维模型
+// @Summary 创建思维模型
+// @Description 创建一个新的思维模型
+// @Tags 思维模型
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body model.CreateModel true "创建思维模型请求参数"
+// @Success 200 {object} api.Response{data=model.ModelDetail} "创建成功"
+// @Failure 400 {object} api.Response "参数错误"
+// @Failure 401 {object} api.Response "未登录"
+// @Router /thinking/model [post]
 func (a *Model) Create(ctx *gin.Context) {
 	a.Ctx = ctx
 	req := &model.CreateModel{}
@@ -55,6 +66,16 @@ func (a *Model) Update(ctx *gin.Context) {
 }
 
 // Get 获取思维模型详情
+// @Summary 获取思维模型详情
+// @Description 根据ID获取思维模型详细信息
+// @Tags 思维模型
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "模型ID"
+// @Success 200 {object} api.Response{data=model.ModelDetail} "查询成功"
+// @Failure 404 {object} api.Response "模型不存在"
+// @Router /thinking/model/{id} [get]
 func (a *Model) Get(ctx *gin.Context) {
 	a.Ctx = ctx
 	idStr := ctx.Param("id")
@@ -88,6 +109,19 @@ func (a *Model) GetByCode(ctx *gin.Context) {
 }
 
 // List 获取思维模型列表
+// @Summary 获取思维模型列表
+// @Description 分页查询思维模型列表，支持多种筛选条件
+// @Tags 思维模型
+// @Accept json
+// @Produce json
+// @Param page query int false "页码，默认1"
+// @Param pageSize query int false "每页数量，默认10"
+// @Param name query string false "名称模糊查询"
+// @Param categoryId query int false "分类ID"
+// @Param difficulty query int false "难度：1-简单，2-中等，3-困难"
+// @Param isFree query bool false "是否免费"
+// @Success 200 {object} api.Response{data=model.ListModelResponse} "查询成功"
+// @Router /thinking/model/list [get]
 func (a *Model) List(ctx *gin.Context) {
 	a.Ctx = ctx
 	req := &model.SearchModel{}
@@ -142,6 +176,17 @@ func (a *Model) Del(ctx *gin.Context) {
 }
 
 // Publish 发布思维模型
+// @Summary 发布思维模型
+// @Description 将思维模型发布到市场
+// @Tags 思维模型
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body model.PublishModel true "发布请求参数"
+// @Success 200 {object} api.Response{data=model.ModelInfo} "发布成功"
+// @Failure 400 {object} api.Response "参数错误"
+// @Failure 401 {object} api.Response "未登录"
+// @Router /thinking/model/publish [post]
 func (a *Model) Publish(ctx *gin.Context) {
 	a.Ctx = ctx
 	req := &model.PublishModel{}

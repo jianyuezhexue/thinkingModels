@@ -19,6 +19,17 @@ func NewTopic() *Topic {
 }
 
 // Create 创建课题
+// @Summary 创建课题
+// @Description 创建一个新的思考课题
+// @Tags 课题管理
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param request body topic.CreateTopic true "创建课题请求参数"
+// @Success 200 {object} api.Response{data=topic.TopicInfo} "创建成功"
+// @Failure 400 {object} api.Response "参数错误"
+// @Failure 401 {object} api.Response "未登录"
+// @Router /subject/topic [post]
 func (a *Topic) Create(ctx *gin.Context) {
 	req := &topic.CreateTopic{}
 	if err := a.Bind(ctx, req); err != nil {
@@ -55,6 +66,16 @@ func (a *Topic) Update(ctx *gin.Context) {
 }
 
 // Get 查询课题详情
+// @Summary 获取课题详情
+// @Description 根据ID获取课题详细信息
+// @Tags 课题管理
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param id path int true "课题ID"
+// @Success 200 {object} api.Response{data=topic.TopicInfo} "查询成功"
+// @Failure 404 {object} api.Response "课题不存在"
+// @Router /subject/topic/{id} [get]
 func (a *Topic) Get(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
@@ -74,6 +95,19 @@ func (a *Topic) Get(ctx *gin.Context) {
 }
 
 // List 查询课题列表
+// @Summary 查询课题列表
+// @Description 分页查询课题列表，支持多种筛选条件
+// @Tags 课题管理
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "页码，默认1"
+// @Param pageSize query int false "每页数量，默认10"
+// @Param title query string false "标题模糊查询"
+// @Param status query int false "状态：0-进行中，1-已完成，2-已归档"
+// @Param priority query int false "优先级：1-低，2-中，3-高"
+// @Success 200 {object} api.Response{data=topic.ListTopicResponse} "查询成功"
+// @Router /subject/topic/list [get]
 func (a *Topic) List(ctx *gin.Context) {
 	req := &topic.SearchTopic{}
 	if err := a.Bind(ctx, req); err != nil {

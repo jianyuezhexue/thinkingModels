@@ -19,6 +19,16 @@ func NewUser() *User {
 }
 
 // Create 创建用户（注册）
+// @Summary 用户注册
+// @Description 用户注册接口，创建新用户账号
+// @Tags 用户认证
+// @Accept json
+// @Produce json
+// @Param request body user.RegisterRequest true "注册请求参数"
+// @Success 200 {object} api.Response{data=user.UserInfo} "注册成功"
+// @Failure 400 {object} api.Response "参数错误"
+// @Failure 409 {object} api.Response "用户名已存在"
+// @Router /auth/register [post]
 func (a User) Create(ctx *gin.Context) {
 	// 参数校验
 	req := &user.RegisterRequest{}
@@ -79,6 +89,18 @@ func (a User) Get(ctx *gin.Context) {
 }
 
 // List 查询用户列表
+// @Summary 查询用户列表
+// @Description 分页查询用户列表，支持多种筛选条件
+// @Tags 用户管理
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param page query int false "页码，默认1"
+// @Param pageSize query int false "每页数量，默认10"
+// @Param username query string false "用户名模糊查询"
+// @Param status query int false "状态：0-禁用，1-启用"
+// @Success 200 {object} api.Response{data=user.ListUserResponse} "查询成功"
+// @Router /user/list [post]
 func (a User) List(ctx *gin.Context) {
 	// 参数校验
 	req := &user.SearchUser{}
@@ -122,6 +144,15 @@ func (a User) Del(ctx *gin.Context) {
 }
 
 // Info 获取当前登录用户信息
+// @Summary 获取当前用户信息
+// @Description 获取当前登录用户的详细信息
+// @Tags 用户认证
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} api.Response{data=user.UserInfo} "获取成功"
+// @Failure 401 {object} api.Response "未登录或token无效"
+// @Router /user/info [get]
 func (a User) Info(ctx *gin.Context) {
 	// 设置上下文（重要：必须在调用其他方法前设置）
 	a.Ctx = ctx
@@ -153,6 +184,16 @@ func (a User) Info(ctx *gin.Context) {
 }
 
 // Login 用户登录
+// @Summary 用户登录
+// @Description 用户登录接口，返回 JWT Token
+// @Tags 用户认证
+// @Accept json
+// @Produce json
+// @Param request body user.LoginRequest true "登录请求参数"
+// @Success 200 {object} api.Response{data=user.LoginResponse} "登录成功"
+// @Failure 400 {object} api.Response "参数错误"
+// @Failure 401 {object} api.Response "用户名或密码错误"
+// @Router /auth/login [post]
 func (a User) Login(ctx *gin.Context) {
 	req := &user.LoginRequest{}
 	err := a.Bind(ctx, req)
