@@ -23,7 +23,7 @@ function convertToUserInfo(backendUser: any): UserInfo {
     realName: backendUser.nickname || backendUser.username,
     avatar: backendUser.avatar || '',
     roles: [], // 后端不返回角色，从 accessCodes 获取
-    homePath: preferences.app.defaultHomePath,
+    homePath: '/market',
     desc: '',
     token: '',
   };
