@@ -56,14 +56,12 @@ func (m *CategoryEntity) CreateCategory(req *CreateCategory) (*CategoryEntity, e
 		heat = 0
 	}
 
-	// 创建实体
-	entity := &CategoryEntity{
-		Name:        req.Name,
-		Icon:        req.Icon,
-		Description: req.Description,
-		Heat:        heat,
-	}
-	entity.BaseModel = m.BaseModel
+	// 使用 NewCategoryEntity 创建全新实体，避免 ID 冲突
+	entity := NewCategoryEntity(m.Ctx)
+	entity.Name = req.Name
+	entity.Icon = req.Icon
+	entity.Description = req.Description
+	entity.Heat = heat
 
 	// 数据校验
 	err = entity.Validate()
