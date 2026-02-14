@@ -32,6 +32,16 @@ const routes: RouteRecordRaw[] = [
           authority: ['admin'],
         },
       },
+      {
+        name: 'SuperDictionaryManagement',
+        path: 'superDictionary',
+        component: () => import('#/views/admin/superDictionary/index.vue'),
+        meta: {
+          icon: 'lucide:book-key',
+          title: '超级字典',
+          authority: ['admin'],
+        },
+      },
     ],
   },
 ];

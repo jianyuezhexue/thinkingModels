@@ -148,13 +148,33 @@ func (l *SuperDictionaryLogic) Tree(req *superDictionary.TreeSuperDictionary) ([
 
 // 构建树形结构
 func buildTree(list []*superDictionary.SuperDictionaryEntity, parentId int64) []*superDictionary.TreeNode {
+	// 使用 map 记录已访问的节点，防止循环引用
+	return buildTreeWithVisited(list, parentId, make(map[uint64]bool))
+}
+
+// 带访问记录的递归构建树
+func buildTreeWithVisited(list []*superDictionary.SuperDictionaryEntity, parentId int64, visited map[uint64]bool) []*superDictionary.TreeNode {
 	var tree []*superDictionary.TreeNode
 
 	for _, item := range list {
+		// 检查是否匹配父节点
 		if item.ParentId == parentId {
+			// 防止循环引用：如果节点已被访问过，跳过
+			if visited[item.Id] {
+				continue
+			}
+
+			// 防止自引用：如果 ParentId == Id，跳过
+			if item.ParentId == int64(item.Id) {
+				continue
+			}
+
+			// 标记为已访问
+			visited[item.Id] = true
+
 			node := &superDictionary.TreeNode{
 				SuperDictionaryEntity: item,
-				Children:              buildTree(list, int64(item.Id)),
+				Children:              buildTreeWithVisited(list, int64(item.Id), visited),
 			}
 			tree = append(tree, node)
 		}
