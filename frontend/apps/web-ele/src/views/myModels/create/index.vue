@@ -529,7 +529,7 @@ const formProgress = computed(() => {
                   </div>
                   
                   <!-- 次要区域：上传自定义图片 -->
-                  <ElUpload
+                  <!-- <ElUpload
                     class="w-full"
                     :auto-upload="false"
                     :on-change="handleCoverChange"
@@ -542,7 +542,7 @@ const formProgress = computed(() => {
                       </svg>
                       <span class="text-sm text-gray-500">或上传自定义图片</span>
                     </div>
-                  </ElUpload>
+                  </ElUpload> -->
                 </div>
               </div>
             </ElFormItem>
