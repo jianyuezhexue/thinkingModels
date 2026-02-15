@@ -35,6 +35,17 @@ func AuthorizedRouters() {
 		userGroup.POST("/list", userApi.List)
 		userGroup.DELETE("", userApi.Del)
 
+		// 角色管理
+		roleApi := iam.NewRole()
+		roleGroup := api.Group("/role")
+		roleGroup.GET("/all", roleApi.All)            // 全量列表（用于下拉选择）
+		roleGroup.POST("/list", roleApi.List)         // 分页列表
+		roleGroup.POST("", roleApi.Create)            // 新建角色
+		roleGroup.PUT("", roleApi.Update)             // 更新角色
+		roleGroup.PUT("/permission", roleApi.UpdatePermission) // 更新权限
+		roleGroup.GET("/:id", roleApi.Get)            // 查询详情
+		roleGroup.DELETE("", roleApi.Del)             // 删除角色
+
 		// 认证相关（非鉴权）
 		authGroup := api.Group("/auth")
 		authGroup.POST("/login", userApi.Login)

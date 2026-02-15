@@ -68,9 +68,9 @@
               <div v-if="slotProps?.row" class="flex items-center gap-2">
                 <div
                   class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                  :style="{ backgroundColor: slotProps.row.roleColor || getRoleColor(slotProps.row.roleCode) }"
+                  :style="{ backgroundColor: getRoleColor(slotProps.row.roleCode) }"
                 >
-                  {{ slotProps.row.roleName.charAt(0) }}
+                  {{ slotProps.row.roleName?.charAt(0) || 'R' }}
                 </div>
                 <span class="font-medium">{{ slotProps.row.roleName }}</span>
               </div>
@@ -85,11 +85,11 @@
           <ElTableColumn label="用户数" width="100" align="center">
             <template #default="slotProps">
               <ElTag v-if="slotProps?.row" type="info" effect="plain" class="!rounded-full">
-                {{ slotProps.row.userCount }}
+                {{ slotProps.row.userCount || 0 }}
               </ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="创建时间" prop="createTime" min-width="160" />
+          <ElTableColumn label="创建时间" prop="createdAt" min-width="160" />
           <ElTableColumn label="操作" width="280" fixed="right">
             <template #default="slotProps">
               <div v-if="slotProps?.row" class="flex gap-2">
@@ -186,7 +186,7 @@
     >
       <ElForm label-position="top">
         <ElFormItem label="当前角色">
-          <ElTag size="large" effect="dark" :color="currentRole?.roleColor">
+          <ElTag size="large" effect="dark" :color="currentRole ? getRoleColor(currentRole.roleCode) : ''">
             {{ currentRole?.roleName }}
           </ElTag>
         </ElFormItem>
@@ -197,6 +197,7 @@
             show-checkbox
             node-key="id"
             :default-expanded-keys="['1']"
+            :checked-keys="checkedMenuIds"
             :props="{ label: 'label', children: 'children' }"
             class="border rounded-lg p-4"
           />
@@ -237,38 +238,14 @@ import type { FormInstance, FormRules } from 'element-plus';
 
 import { Page } from '@vben/common-ui';
 
-// 角色接口
-interface Role {
-  id: string;
-  roleName: string;
-  roleCode: string;
-  description: string;
-  userCount: number;
-  createTime: string;
-  roleColor?: string;
-}
-
-// 菜单树节点
-interface MenuNode {
-  id: string;
-  label: string;
-  children?: MenuNode[];
-}
-
-// 搜索表单
-const searchForm = reactive({
-  roleName: '',
-});
-
-// 列表数据
-const loading = ref(false);
-const roleList = ref<Role[]>([]);
-const tableData = ref<Role[]>([]);
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0,
-});
+import {
+  getRoleListApi,
+  createRoleApi,
+  updateRoleApi,
+  deleteRoleApi,
+  updateRolePermissionApi,
+} from '#/api/iam/role';
+import type { RoleApi } from '#/api/iam/role';
 
 // 角色颜色映射
 const roleColorMap: Record<string, string> = {
@@ -286,6 +263,20 @@ const roleColorMap: Record<string, string> = {
 function getRoleColor(roleCode: string) {
   return roleColorMap[roleCode] || '#6B7280';
 }
+
+// 搜索表单
+const searchForm = reactive({
+  roleName: '',
+});
+
+// 列表数据
+const loading = ref(false);
+const tableData = ref<RoleApi.Role[]>([]);
+const pagination = reactive({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+});
 
 // 对话框
 const dialogVisible = ref(false);
@@ -316,11 +307,12 @@ const rules: FormRules = {
 // 权限对话框
 const permissionDialogVisible = ref(false);
 const permissionLoading = ref(false);
-const currentRole = ref<Role | null>(null);
+const currentRole = ref<RoleApi.Role | null>(null);
 const treeRef = ref<any>(null);
+const checkedMenuIds = ref<string[]>([]);
 
 // 菜单树数据
-const menuTree = ref<MenuNode[]>([
+const menuTree = ref<RoleApi.MenuNode[]>([
   {
     id: '1',
     label: '系统管理',
@@ -347,84 +339,6 @@ const menuTree = ref<MenuNode[]>([
   },
 ]);
 
-// 生成模拟数据
-function generateMockData(): Role[] {
-  return [
-    {
-      id: '1',
-      roleName: '超级管理员',
-      roleCode: 'admin',
-      description: '系统超级管理员，拥有所有权限，可进行系统配置和用户管理',
-      userCount: 3,
-      createTime: '2024-01-15 10:30:00',
-      roleColor: roleColorMap.admin,
-    },
-    {
-      id: '2',
-      roleName: '运营管理员',
-      roleCode: 'operator',
-      description: '运营人员，负责内容审核、数据分析和用户反馈处理',
-      userCount: 12,
-      createTime: '2024-01-15 11:20:00',
-      roleColor: roleColorMap.operator,
-    },
-    {
-      id: '3',
-      roleName: '普通用户',
-      roleCode: 'user',
-      description: '普通注册用户，可使用基础功能创建和分享思维模型',
-      userCount: 1256,
-      createTime: '2024-01-16 14:20:00',
-      roleColor: roleColorMap.user,
-    },
-    {
-      id: '4',
-      roleName: 'VIP会员',
-      roleCode: 'vip',
-      description: '付费VIP用户，享有高级功能、无限模型创建和AI辅助分析',
-      userCount: 328,
-      createTime: '2024-01-17 09:15:00',
-      roleColor: roleColorMap.vip,
-    },
-    {
-      id: '5',
-      roleName: 'SVIP会员',
-      roleCode: 'svip',
-      description: '高级会员，享有VIP所有功能及团队协作、数据导出等特权',
-      userCount: 86,
-      createTime: '2024-02-01 16:30:00',
-      roleColor: roleColorMap.svip,
-    },
-    {
-      id: '6',
-      roleName: '访客',
-      roleCode: 'guest',
-      description: '未注册用户，仅可浏览公开模型和基础内容',
-      userCount: 2847,
-      createTime: '2024-01-18 16:45:00',
-      roleColor: roleColorMap.guest,
-    },
-    {
-      id: '7',
-      roleName: '测试用户',
-      roleCode: 'tester',
-      description: '内部测试人员，用于新功能验证和回归测试',
-      userCount: 15,
-      createTime: '2024-02-10 09:00:00',
-      roleColor: roleColorMap.tester,
-    },
-    {
-      id: '8',
-      roleName: '内容编辑',
-      roleCode: 'editor',
-      description: '内容编辑人员，负责思维模型模板管理和推荐内容维护',
-      userCount: 8,
-      createTime: '2024-02-15 14:30:00',
-      roleColor: roleColorMap.editor,
-    },
-  ];
-}
-
 // 搜索
 function handleSearch() {
   pagination.page = 1;
@@ -441,29 +355,17 @@ function handleReset() {
 async function loadData() {
   loading.value = true;
   try {
-    // 模拟 API 调用
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    const res = await getRoleListApi({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      roleName: searchForm.roleName || undefined,
+    });
 
-    // 获取模拟数据
-    const mockData = generateMockData();
-    roleList.value = mockData;
-
-    // 前端搜索过滤
-    let filteredData = mockData;
-    if (searchForm.roleName) {
-      const keyword = searchForm.roleName.toLowerCase();
-      filteredData = mockData.filter(
-        (item) =>
-          item.roleName.toLowerCase().includes(keyword) ||
-          item.roleCode.toLowerCase().includes(keyword)
-      );
-    }
-
-    // 分页处理
-    pagination.total = filteredData.length;
-    const start = (pagination.page - 1) * pagination.pageSize;
-    const end = start + pagination.pageSize;
-    tableData.value = filteredData.slice(start, end);
+    tableData.value = res.list || [];
+    pagination.total = res.total || 0;
+  } catch (error: any) {
+    ElMessage.error(error?.message || '加载失败');
+    console.error('加载角色列表失败:', error);
   } finally {
     loading.value = false;
   }
@@ -480,7 +382,7 @@ function handleAdd() {
 }
 
 // 编辑
-function handleEdit(row: Role) {
+function handleEdit(row: RoleApi.Role) {
   isEdit.value = true;
   form.id = row.id;
   form.roleName = row.roleName;
@@ -490,33 +392,50 @@ function handleEdit(row: Role) {
 }
 
 // 删除
-async function handleDelete(row: Role) {
+async function handleDelete(row: RoleApi.Role) {
   try {
     await ElMessageBox.confirm(
       `确定要删除角色 "${row.roleName}" 吗？此操作不可恢复。`,
       '确认删除',
       { type: 'warning' }
     );
+
+    await deleteRoleApi([row.id]);
     ElMessage.success('删除成功');
     loadData();
-  } catch {
-    // 取消删除
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error?.message || '删除失败');
+      console.error('删除角色失败:', error);
+    }
   }
 }
 
 // 权限配置
-function handlePermission(row: Role) {
+function handlePermission(row: RoleApi.Role) {
   currentRole.value = row;
+  // 解析已有的菜单权限
+  checkedMenuIds.value = row.menuIds ? row.menuIds.split(',').filter(Boolean) : [];
   permissionDialogVisible.value = true;
 }
 
 // 保存权限
 async function handleSavePermission() {
+  if (!currentRole.value) return;
+
   permissionLoading.value = true;
   try {
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    const menuIds = treeRef.value?.getCheckedKeys() || [];
+    await updateRolePermissionApi({
+      id: currentRole.value.id,
+      menuIds: menuIds as string[],
+    });
     ElMessage.success('权限配置已保存');
     permissionDialogVisible.value = false;
+    loadData();
+  } catch (error: any) {
+    ElMessage.error(error?.message || '保存失败');
+    console.error('保存权限失败:', error);
   } finally {
     permissionLoading.value = false;
   }
@@ -527,10 +446,28 @@ async function handleSubmit() {
   await formRef.value?.validate();
   submitLoading.value = true;
   try {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    ElMessage.success(isEdit.value ? '更新成功' : '新增成功');
+    if (isEdit.value) {
+      // 编辑
+      await updateRoleApi({
+        id: form.id,
+        roleName: form.roleName,
+        description: form.description,
+      });
+      ElMessage.success('更新成功');
+    } else {
+      // 新增
+      await createRoleApi({
+        roleName: form.roleName,
+        roleCode: form.roleCode,
+        description: form.description,
+      });
+      ElMessage.success('新增成功');
+    }
     dialogVisible.value = false;
     loadData();
+  } catch (error: any) {
+    ElMessage.error(error?.message || '操作失败');
+    console.error('提交失败:', error);
   } finally {
     submitLoading.value = false;
   }

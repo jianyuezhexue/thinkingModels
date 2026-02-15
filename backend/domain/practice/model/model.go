@@ -15,6 +15,9 @@ type ModelEntityInterface interface {
 	base.BaseModelInterface[ModelEntity]
 	Publish() error
 	Unpublish() error
+	SubmitForReview() error
+	Approve(reviewerId uint64, reviewerName, note string)
+	Reject(reviewerId uint64, reviewerName, note string) error
 	IncrementUsageCount()
 	IncrementAdoptCount()
 	IncrementLikeCount()
@@ -37,7 +40,7 @@ type ModelEntity struct {
 	AiPrompt      string `json:"aiPrompt" type:"db" comment:"AI提示词模板"`
 	Difficulty    int    `json:"difficulty" type:"db" comment:"难度: 1=简单, 2=中等, 3=困难"`
 	EstimatedTime int    `json:"estimatedTime" type:"db" comment:"预计用时(分钟)"`
-	Status        int    `json:"status" type:"db" comment:"状态: 0=草稿, 1=已发布, 2=已下架"`
+	Status        int    `json:"status" type:"db" comment:"状态: 0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回"`
 	Version       string `json:"version" type:"db" comment:"版本号"`
 	IsOfficial    bool   `json:"isOfficial" type:"db" comment:"是否官方"`
 	SourceModelId uint64 `json:"sourceModelId" type:"db" comment:"派生来源ID"`
@@ -45,6 +48,9 @@ type ModelEntity struct {
 	AdoptCount    int64  `json:"adoptCount" type:"db" comment:"采纳次数"`
 	LikeCount     int64  `json:"likeCount" type:"db" comment:"点赞数"`
 	CommentCount  int64  `json:"commentCount" type:"db" comment:"评论数"`
+	ReviewNote    string `json:"reviewNote" type:"db" comment:"审核意见"`
+	ReviewerId    uint64 `json:"reviewerId" type:"db" comment:"审核人ID"`
+	ReviewerName  string `json:"reviewerName" type:"db" comment:"审核人姓名"`
 }
 
 // NewModelEntity 实例化思维模型实体
@@ -99,19 +105,51 @@ func (m *ModelEntity) Complete() error {
 
 // Publish 发布模型
 func (m *ModelEntity) Publish() error {
-	if m.Status == 1 {
+	if m.Status == StatusPublished {
 		return errors.New("模型已发布")
 	}
-	m.Status = 1
+	m.Status = StatusPublished
 	return nil
 }
 
 // Unpublish 下架模型
 func (m *ModelEntity) Unpublish() error {
-	if m.Status != 1 {
+	if m.Status != StatusPublished {
 		return errors.New("模型未发布，无法下架")
 	}
-	m.Status = 2
+	m.Status = StatusUnpublish
+	return nil
+}
+
+// SubmitForReview 提交审核
+func (m *ModelEntity) SubmitForReview() error {
+	if m.Status == StatusReviewing {
+		return errors.New("模型正在审核中")
+	}
+	if m.Status == StatusPublished {
+		return errors.New("模型已发布，无需审核")
+	}
+	m.Status = StatusReviewing
+	return nil
+}
+
+// Approve 审核通过
+func (m *ModelEntity) Approve(reviewerId uint64, reviewerName, note string) {
+	m.Status = StatusPublished
+	m.ReviewerId = reviewerId
+	m.ReviewerName = reviewerName
+	m.ReviewNote = note
+}
+
+// Reject 审核驳回
+func (m *ModelEntity) Reject(reviewerId uint64, reviewerName, note string) error {
+	if note == "" {
+		return errors.New("驳回时必须填写审核意见")
+	}
+	m.Status = StatusRejected
+	m.ReviewerId = reviewerId
+	m.ReviewerName = reviewerName
+	m.ReviewNote = note
 	return nil
 }
 

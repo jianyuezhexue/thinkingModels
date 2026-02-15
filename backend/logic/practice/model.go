@@ -138,7 +138,7 @@ func (l *ModelLogic) Del(ids []uint64) error {
 	return entity.Del(ids...)
 }
 
-// Publish 发布思维模型
+// Publish 发布思维模型（提交审核）
 func (l *ModelLogic) Publish(req *model.PublishModel) (*model.ModelInfo, error) {
 	entity := model.NewModelEntity(l.Ctx)
 	_, err := entity.LoadById(req.Id)
@@ -146,7 +146,8 @@ func (l *ModelLogic) Publish(req *model.PublishModel) (*model.ModelInfo, error) 
 		return nil, err
 	}
 
-	if err := entity.Publish(); err != nil {
+	// 提交审核而不是直接发布
+	if err := entity.SubmitForReview(); err != nil {
 		return nil, err
 	}
 
@@ -168,6 +169,68 @@ func (l *ModelLogic) Unpublish(id uint64) (*model.ModelInfo, error) {
 
 	if err := entity.Unpublish(); err != nil {
 		return nil, err
+	}
+
+	res, err := entity.Update()
+	if err != nil {
+		return nil, err
+	}
+
+	return convertToModelInfo(res), nil
+}
+
+// SubmitForReview 提交审核
+func (l *ModelLogic) SubmitForReview(id uint64) (*model.ModelInfo, error) {
+	entity := model.NewModelEntity(l.Ctx)
+	_, err := entity.LoadById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := entity.SubmitForReview(); err != nil {
+		return nil, err
+	}
+
+	res, err := entity.Update()
+	if err != nil {
+		return nil, err
+	}
+
+	return convertToModelInfo(res), nil
+}
+
+// Review 审核模型
+func (l *ModelLogic) Review(req *model.ReviewModel) (*model.ModelInfo, error) {
+	entity := model.NewModelEntity(l.Ctx)
+	_, err := entity.LoadById(req.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	concreteEntity, ok := entity.(*model.ModelEntity)
+	if !ok {
+		return nil, errors.New("模型实体转换失败")
+	}
+
+	// 获取当前用户信息
+	currUserId, _ := l.Ctx.Get("currUserId")
+	currUserName, _ := l.Ctx.Get("currUserName")
+
+	var reviewerId uint64
+	if id, ok := currUserId.(uint64); ok {
+		reviewerId = id
+	}
+	reviewerName := ""
+	if name, ok := currUserName.(string); ok {
+		reviewerName = name
+	}
+
+	if req.Approved {
+		concreteEntity.Approve(reviewerId, reviewerName, req.Note)
+	} else {
+		if err := concreteEntity.Reject(reviewerId, reviewerName, req.Note); err != nil {
+			return nil, err
+		}
 	}
 
 	res, err := entity.Update()
@@ -224,8 +287,10 @@ func convertToModelInfo(entity any) *model.ModelInfo {
 			LikeCount:    int(e.LikeCount),
 			CommentCount: int(e.CommentCount),
 		},
-		CreatedAt: e.CreatedAt.String(),
-		UpdatedAt: e.UpdatedAt.String(),
+		ReviewNote:   e.ReviewNote,
+		ReviewerName: e.ReviewerName,
+		CreatedAt:    e.CreatedAt.String(),
+		UpdatedAt:    e.UpdatedAt.String(),
 	}
 }
 

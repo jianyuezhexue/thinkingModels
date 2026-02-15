@@ -935,32 +935,37 @@ async function handleSubmit() {
 
     submitLoading.value = true;
 
-    // 构建提交数据（字段名与后端 Go struct 对应）
+    // 构建提交数据（字段名使用驼峰格式与后端 Go struct 对应）
     const submitData = {
       name: form.title,
       code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
       description: form.description,
-      category_id: form.category[0] ? parseInt(form.category[0]) : 1,
+      categoryId: form.category[0] ? parseInt(form.category[0]) : 1,
       difficulty: 2, // 默认难度：1=简单 2=中等 3=困难
-      estimated_time: 30, // 默认预估时间（分钟）
-      tags: form.tags,
-      cover_image: form.cover,
+      estimatedTime: 30, // 默认预估时间（分钟）
+      coverImage: form.cover,
       content: JSON.stringify({
         overview: form.content.overview,
-        steps: form.content.steps.filter(s => s.title.trim() || s.description.trim()),
-        examples: form.content.examples.filter(e => e.title.trim() || e.content.trim()),
+        steps: form.content.steps.filter((s: any) => s.title.trim() || s.description.trim()),
+        examples: form.content.examples.filter((e: any) => e.title.trim() || e.content.trim()),
+        tags: form.tags,
       }),
-      is_free: form.isFree,
+      overview: form.content.overview,
       price: form.isFree ? 0 : form.price,
     };
 
     if (isEdit.value && editId.value) {
       // 编辑模式 - 更新模型并提交审核
-      await requestClient.post(`/thinking/model/${editId.value}/publish`, submitData);
+      await requestClient.put('/thinking/model', { ...submitData, id: editId.value });
+      await requestClient.post('/thinking/model/publish', { id: editId.value });
       ElMessage.success('模型已更新并提交审核');
     } else {
-      // 创建模式 - 创建模型并提交审核
-      await requestClient.post('/thinking/model', submitData);
+      // 创建模式 - 创建模型
+      const res = await requestClient.post('/thinking/model', submitData);
+      // 创建成功后提交审核
+      if (res && res.id) {
+        await requestClient.post('/thinking/model/publish', { id: res.id });
+      }
       ElMessage.success('模型已创建并提交审核');
     }
 
@@ -968,7 +973,7 @@ async function handleSubmit() {
   } catch (error: any) {
     if (error !== 'cancel') {
       // 不是用户取消，显示错误信息
-      const errorMsg = error?.response?.data?.message || error?.message || '提交失败，请重试';
+      const errorMsg = error?.response?.data?.msg || error?.response?.data?.message || error?.message || '提交失败，请重试';
       ElMessage.error(errorMsg);
     }
   } finally {
@@ -981,29 +986,28 @@ async function handleSaveDraft() {
   try {
     submitLoading.value = true;
 
-    // 构建草稿数据（字段名与后端 Go struct 对应）
+    // 构建草稿数据（字段名使用驼峰格式与后端 Go struct 对应）
     const draftData = {
-      name: form.title,
-      code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
+      name: form.title || '未命名草稿',
+      code: (form.title || 'draft').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
       description: form.description,
-      category_id: form.category[0] ? parseInt(form.category[0]) : 1,
+      categoryId: form.category[0] ? parseInt(form.category[0]) : 1,
       difficulty: 2,
-      estimated_time: 30,
-      tags: form.tags,
-      cover_image: form.cover,
+      estimatedTime: 30,
+      coverImage: form.cover,
       content: JSON.stringify({
         overview: form.content.overview,
-        steps: form.content.steps.filter(s => s.title.trim() || s.description.trim()),
-        examples: form.content.examples.filter(e => e.title.trim() || e.content.trim()),
+        steps: form.content.steps.filter((s: any) => s.title.trim() || s.description.trim()),
+        examples: form.content.examples.filter((e: any) => e.title.trim() || e.content.trim()),
+        tags: form.tags,
       }),
-      is_free: form.isFree,
+      overview: form.content.overview,
       price: form.isFree ? 0 : form.price,
-      status: 'draft',
     };
 
     if (isEdit.value && editId.value) {
       // 编辑模式 - 更新草稿
-      await requestClient.put(`/thinking/model/${editId.value}`, draftData);
+      await requestClient.put('/thinking/model', { ...draftData, id: editId.value });
     } else {
       // 创建模式 - 创建草稿
       await requestClient.post('/thinking/model', draftData);
@@ -1012,7 +1016,7 @@ async function handleSaveDraft() {
     ElMessage.success('草稿已保存');
     router.push('/my-models');
   } catch (error: any) {
-    const errorMsg = error?.response?.data?.message || error?.message || '保存失败，请重试';
+    const errorMsg = error?.response?.data?.msg || error?.response?.data?.message || error?.message || '保存失败，请重试';
     ElMessage.error(errorMsg);
   } finally {
     submitLoading.value = false;

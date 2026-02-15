@@ -1,5 +1,15 @@
 package model
 
+// ==================== 状态常量 ====================
+
+const (
+	StatusDraft     = 0 // 草稿
+	StatusPublished = 1 // 已发布
+	StatusUnpublish = 2 // 已下架
+	StatusReviewing = 3 // 审核中
+	StatusRejected  = 4 // 已驳回
+)
+
 // ==================== 请求DTO ====================
 
 // CreateModel 创建思维模型请求
@@ -45,6 +55,13 @@ type PublishModel struct {
 // UnpublishModel 下架模型请求
 type UnpublishModel struct {
 	Id uint64 `json:"id" binding:"required"`
+}
+
+// ReviewModel 审核模型请求
+type ReviewModel struct {
+	Id       uint64 `json:"id" binding:"required"`
+	Approved bool   `json:"approved"`       // true=通过, false=驳回
+	Note     string `json:"note" binding:"max=500"` // 审核意见
 }
 
 // ForkModel 引用创建模型请求
@@ -116,6 +133,9 @@ type ModelInfo struct {
 	Stats         ModelStats  `json:"stats"`
 	Tags          []string    `json:"tags"`
 	PublishTime   string      `json:"publishTime,omitempty"`
+	ReviewNote    string      `json:"reviewNote,omitempty"`    // 审核意见
+	ReviewerName  string      `json:"reviewerName,omitempty"` // 审核人
+	ReviewTime    string      `json:"reviewTime,omitempty"`   // 审核时间
 	CreatedAt     string      `json:"createdAt"`
 	UpdatedAt     string      `json:"updatedAt"`
 }
