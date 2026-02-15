@@ -667,7 +667,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -689,6 +689,7 @@ import type { FormInstance } from 'element-plus';
 
 // API
 import { getAllCategoriesApi, type MasterCategoryApi } from '#/api/master/category';
+import { getThinkingModelDetailApi } from '#/api/thinking/model';
 
 // Store
 import { useResourcesStore } from '#/store/resources';
@@ -815,29 +816,70 @@ function selectPresetCover(url: string) {
 const tagInput = ref('');
 const tagInputVisible = ref(false);
 
+// 加载状态
+const pageLoading = ref(false);
+
+// 请求取消控制器
+let abortController: AbortController | null = null;
+
+// 解析内容
+function parseContent(content: string): { overview: string; steps: { title: string; description: string }[]; examples: { title: string; content: string }[] } {
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      overview: parsed.overview || '',
+      steps: parsed.steps || [],
+      examples: parsed.examples || [],
+    };
+  } catch {
+    return {
+      overview: '',
+      steps: [],
+      examples: [],
+    };
+  }
+}
+
 // 加载数据
 onMounted(async () => {
   // 加载分类数据
   await loadCategories();
 
-  if (isEdit.value) {
-    // 模拟加载编辑数据
-    await new Promise(resolve => setTimeout(resolve, 500));
-    form.title = 'SWOT 分析思维模型';
-    form.description = '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁。';
-    form.category = ['business', 'strategy'];
-    form.tags = ['战略', '分析', '商业'];
-    form.isFree = false;
-    form.price = 29;
-    form.content.overview = 'SWOT 分析是一种战略规划工具...';
-    form.content.steps = [
-      { title: '识别优势', description: '列出相对于竞争对手的优势...' },
-      { title: '识别劣势', description: '诚实地列出需要改进的领域...' },
-    ];
-    form.content.examples = [
-      { title: '电商平台案例', content: '优势：用户基础庞大...' },
-    ];
+  if (isEdit.value && editId.value) {
+    // 加载编辑数据
+    pageLoading.value = true;
+    abortController = new AbortController();
+    try {
+      const res = await getThinkingModelDetailApi(Number(editId.value));
+      form.title = res.name;
+      form.description = res.description || '';
+      form.cover = res.coverImage || '';
+      form.category = res.categoryId ? [String(res.categoryId)] : [];
+      form.isFree = res.isFree;
+      form.price = res.price || 29;
+
+      // 解析内容
+      const content = parseContent(res.content || '');
+      form.content.overview = content.overview || res.overview || '';
+      form.content.steps = content.steps.length > 0 ? content.steps : [{ title: '', description: '' }];
+      form.content.examples = content.examples.length > 0 ? content.examples : [{ title: '', content: '' }];
+
+      // 标签
+      if (res.tags && Array.isArray(res.tags)) {
+        form.tags = res.tags.slice(0, 5);
+      }
+    } catch (error) {
+      console.error('加载模型数据失败:', error);
+      ElMessage.error('加载模型数据失败');
+      router.push('/my-models');
+    } finally {
+      pageLoading.value = false;
+    }
   }
+});
+
+onUnmounted(() => {
+  abortController?.abort();
 });
 
 // 标签操作
@@ -955,8 +997,8 @@ async function handleSubmit() {
 
     if (isEdit.value && editId.value) {
       // 编辑模式 - 更新模型并提交审核
-      await requestClient.put('/thinkingModel/model', { ...submitData, id: editId.value });
-      await requestClient.post('/thinkingModel/model/publish', { id: editId.value });
+      await requestClient.put('/thinkingModel/model', { ...submitData, id: Number(editId.value) });
+      await requestClient.post('/thinkingModel/model/publish', { id: Number(editId.value) });
       ElMessage.success('模型已更新并提交审核');
     } else {
       // 创建模式 - 创建模型
@@ -1005,7 +1047,7 @@ async function handleSaveDraft() {
 
     if (isEdit.value && editId.value) {
       // 编辑模式 - 更新草稿
-      await requestClient.put('/thinkingModel/model', { ...draftData, id: editId.value });
+      await requestClient.put('/thinkingModel/model', { ...draftData, id: Number(editId.value) });
     } else {
       // 创建模式 - 创建草稿
       await requestClient.post('/thinkingModel/model', draftData);

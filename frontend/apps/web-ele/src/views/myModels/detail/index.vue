@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -13,14 +13,24 @@ import {
   ElSkeleton,
   ElSkeletonItem,
   ElMessageBox,
-  ElProgress,
   ElAvatar,
 } from 'element-plus';
+
+import {
+  getThinkingModelDetailApi,
+  deleteThinkingModelApi,
+  publishThinkingModelApi,
+  unpublishThinkingModelApi,
+} from '#/api/thinking/model';
+import { getAllCategoriesApi } from '#/api/master/category';
 
 // 路由
 const route = useRoute();
 const router = useRouter();
-const modelId = computed(() => route.params.id as string);
+const modelId = computed(() => Number(route.params.id));
+
+// 请求取消控制器
+let abortController: AbortController | null = null;
 
 // 加载状态
 const loading = ref(true);
@@ -37,130 +47,105 @@ const tabs = [
   { id: 'analytics', label: '数据分析', icon: '📊' },
 ];
 
+// 分类选项
+const categoryOptions = ref<{ value: number; label: string }[]>([]);
+
 // 模型数据类型
 interface ModelDetail {
-  id: string;
-  title: string;
+  id: number;
+  name: string;
   description: string;
-  cover: string;
-  category: string;
-  categoryName: string;
-  tags: string[];
-  status: 'published' | 'draft' | 'under_review' | 'rejected';
-  statusText: string;
+  coverImage: string;
+  icon: string;
+  categoryId: number;
+  categoryName?: string;
+  tags: string[] | null;
+  status: number; // 0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回
   price: number;
   isFree: boolean;
+  overview: string;
+  content: string;
+  difficulty: number;
+  estimatedTime: number;
+  version: string;
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
   stats: {
-    adoptions: number;
-    practices: number;
-    likes: number;
-    reviews: number;
-    views: number;
-  };
-  revenue: {
-    total: number;
-    thisMonth: number;
-    lastMonth: number;
-    history: { month: string; amount: number }[];
-  };
-  content: {
-    overview: string;
-    steps: { title: string; description: string }[];
-    examples: { title: string; content: string }[];
+    usageCount: number;
+    adoptCount: number;
+    likeCount: number;
+    commentCount: number;
   };
   createdAt: string;
   updatedAt: string;
-  rejectReason?: string;
+  reviewNote?: string;
+}
+
+interface ModelContent {
+  overview: string;
+  steps: { title: string; description: string }[];
+  examples: { title: string; content: string }[];
 }
 
 const model = ref<ModelDetail | null>(null);
+const modelContent = ref<ModelContent>({
+  overview: '',
+  steps: [],
+  examples: [],
+});
 
-// 模拟反馈数据
-const mockFeedbacks = [
-  { id: '1', user: '张同学', avatar: '', content: '非常实用的思维模型，帮助我整理了很多思路！', rating: 5, date: '2024-02-18' },
-  { id: '2', user: '李经理', avatar: '', content: '用来做项目决策分析很有帮助，推荐给团队了。', rating: 5, date: '2024-02-15' },
-  { id: '3', user: '王创业者', avatar: '', content: '结构清晰，案例丰富，对商业分析很有帮助。', rating: 4, date: '2024-02-10' },
-];
+// 解析内容
+function parseContent(content: string): ModelContent {
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      overview: parsed.overview || '',
+      steps: parsed.steps || [],
+      examples: parsed.examples || [],
+    };
+  } catch {
+    return {
+      overview: content || '',
+      steps: [],
+      examples: [],
+    };
+  }
+}
 
-// 模拟数据
-const mockModelDetail: ModelDetail = {
-  id: '1',
-  title: 'SWOT 分析思维模型',
-  description: '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁，适用于商业决策和个人发展规划。',
-  cover: '/images/swot-cover.svg',
-  category: 'business',
-  categoryName: '商业管理',
-  tags: ['战略', '分析', '商业', '管理'],
-  status: 'published',
-  statusText: '已发布',
-  price: 29,
-  isFree: false,
-  stats: {
-    adoptions: 1256,
-    practices: 3421,
-    likes: 328,
-    reviews: 56,
-    views: 8900,
-  },
-  revenue: {
-    total: 8560,
-    thisMonth: 1200,
-    lastMonth: 980,
-    history: [
-      { month: '2023-09', amount: 450 },
-      { month: '2023-10', amount: 520 },
-      { month: '2023-11', amount: 680 },
-      { month: '2023-12', amount: 890 },
-      { month: '2024-01', amount: 1120 },
-      { month: '2024-02', amount: 1200 },
-    ],
-  },
-  content: {
-    overview: 'SWOT 分析是一种战略规划工具，用于评估企业、项目或个人的优势（Strengths）、劣势（Weaknesses）、机会（Opportunities）和威胁（Threats）。这种方法帮助决策者全面了解内外部环境，制定更有效的战略。\n\n通过系统分析内部优势与劣势，以及外部机会与威胁，SWOT 分析能够帮助决策者：\n1. 更清晰地了解当前状况\n2. 发现潜在的战略方向\n3. 识别需要改进的领域\n4. 为未来的决策提供依据',
-    steps: [
-      {
-        title: '识别优势 (Strengths)',
-        description: '列出你或你的组织相对于竞争对手的优势。包括资源、能力、经验、品牌等内部因素。与竞争对手相比，你有什么独特的优势？你有哪些其他人难以复制的资源或能力？',
-      },
-      {
-        title: '识别劣势 (Weaknesses)',
-        description: '诚实地列出需要改进的领域。这些是你相对于竞争对手的不足之处。有哪些领域你需要改进？你缺乏哪些资源或能力？',
-      },
-      {
-        title: '发现机会 (Opportunities)',
-        description: '分析外部环境中的有利因素。包括市场趋势、政策变化、技术发展等。外部环境中有哪些有利的变化？有哪些未被满足的市场需求？',
-      },
-      {
-        title: '识别威胁 (Threats)',
-        description: '评估可能对你产生负面影响的外部因素。包括竞争、经济环境、法规变化等。有哪些外部因素可能对你造成威胁？',
-      },
-      {
-        title: '整合分析与制定策略',
-        description: '将 SWOT 四个要素进行交叉分析，制定 SO、WO、ST、WT 四种策略组合，形成全面的行动方案。',
-      },
-    ],
-    examples: [
-      {
-        title: '案例：某电商平台的 SWOT 分析',
-        content: '优势：拥有庞大的用户基础（5亿+注册用户）、完善的物流体系、强大的技术团队、深厚的品牌认知。劣势：运营成本较高、对第三方商家管控力有限、用户活跃度有下降趋势。机会：下沉市场增长潜力大、跨境电商政策利好、直播带货兴起带来新增长点。威胁：竞争对手价格战激烈、监管政策趋严、用户获取成本持续上升。\n\n策略建议：\n1. SO策略：利用用户基础优势，加速拓展下沉市场\n2. WO策略：通过直播带货提升用户活跃度\n3. ST策略：强化品牌优势，避开价格战\n4. WT策略：降本增效，优化商家管理体系',
-      },
-      {
-        title: '案例：个人职业发展的 SWOT 分析',
-        content: '优势：专业技能扎实（熟练掌握3门编程语言）、沟通能力强、学习能力快、具有项目管理经验。劣势：管理经验不足、行业人脉资源有限、英语口语能力一般。机会：AI行业快速发展、公司有内部晋升机会、远程工作成为趋势。威胁：35岁职场焦虑、技术更新换代快、AI可能替代部分工作。\n\n策略建议：\n1. SO策略：利用技术优势切入AI领域\n2. WO策略：寻找mentor积累管理经验\n3. ST策略：持续学习保持技术竞争力\n4. WT策略：建立个人品牌，拓展人脉网络',
-      },
-    ],
-  },
-  createdAt: '2024-01-15T08:00:00Z',
-  updatedAt: '2024-02-10T10:30:00Z',
-};
+// 加载分类列表
+async function loadCategories() {
+  try {
+    const list = await getAllCategoriesApi();
+    categoryOptions.value = list.map((item) => ({
+      value: Number(item.id),
+      label: item.name,
+    }));
+  } catch (error) {
+    console.error('加载分类列表失败:', error);
+  }
+}
 
 // 获取模型详情
 async function fetchModelDetail() {
+  abortController?.abort();
+  abortController = new AbortController();
+  const signal = abortController.signal;
+
   loading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    model.value = mockModelDetail;
-  } catch (error) {
+    const res = await getThinkingModelDetailApi(modelId.value);
+    model.value = {
+      ...res,
+      categoryName: categoryOptions.value.find((c) => c.value === res.categoryId)?.label || '',
+    };
+    modelContent.value = parseContent(res.content || '');
+  } catch (error: any) {
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
+      return;
+    }
     console.error('获取模型详情失败:', error);
     ElMessage.error('获取模型详情失败');
   } finally {
@@ -168,8 +153,13 @@ async function fetchModelDetail() {
   }
 }
 
-onMounted(() => {
-  fetchModelDetail();
+onMounted(async () => {
+  await loadCategories();
+  await fetchModelDetail();
+});
+
+onUnmounted(() => {
+  abortController?.abort();
 });
 
 // 操作函数
@@ -182,61 +172,72 @@ function handleEdit() {
 }
 
 async function handleDelete() {
+  if (!model.value) return;
   try {
     await ElMessageBox.confirm(
-      `确定要删除模型「${model.value?.title}」吗？此操作不可恢复。`,
+      `确定要删除模型「${model.value.name}」吗？此操作不可恢复。`,
       '删除确认',
       { type: 'warning' }
     );
+    await deleteThinkingModelApi({ ids: [model.value.id] });
     ElMessage.success('模型已删除');
     router.push('/my-models');
-  } catch {
-    // 用户取消
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error);
+      ElMessage.error('删除失败');
+    }
   }
 }
 
 async function handlePublish() {
+  if (!model.value) return;
   try {
     await ElMessageBox.confirm(
       '提交审核后，模型将在审核通过后发布到市场。确定提交吗？',
       '提交审核',
       { type: 'info' }
     );
+    await publishThinkingModelApi({ id: model.value.id });
     ElMessage.success('模型已提交审核');
     fetchModelDetail();
-  } catch {
-    // 用户取消
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('提交审核失败:', error);
+      ElMessage.error('提交审核失败');
+    }
   }
 }
 
 async function handleUnpublish() {
+  if (!model.value) return;
   try {
     await ElMessageBox.confirm(
       '下架后用户将无法继续购买此模型。确定下架吗？',
       '确认下架',
       { type: 'warning' }
     );
+    await unpublishThinkingModelApi(model.value.id);
     ElMessage.success('模型已下架');
     fetchModelDetail();
-  } catch {
-    // 用户取消
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('下架失败:', error);
+      ElMessage.error('下架失败');
+    }
   }
 }
 
-// 工具函数
-function getStatusStyle(status: string): { bg: string; text: string; label: string } {
-  const styles: Record<string, { bg: string; text: string; label: string }> = {
-    published: { bg: 'bg-green-100', text: 'text-green-700', label: '已发布' },
-    draft: { bg: 'bg-gray-100', text: 'text-gray-600', label: '草稿' },
-    under_review: { bg: 'bg-amber-100', text: 'text-amber-700', label: '审核中' },
-    rejected: { bg: 'bg-red-100', text: 'text-red-700', label: '已驳回' },
+// 工具函数 - 状态映射：0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回
+function getStatusStyle(status: number): { bg: string; text: string; label: string } {
+  const styles: Record<number, { bg: string; text: string; label: string }> = {
+    0: { bg: 'bg-gray-100', text: 'text-gray-600', label: '草稿' },
+    1: { bg: 'bg-green-100', text: 'text-green-700', label: '已发布' },
+    2: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '已下架' },
+    3: { bg: 'bg-amber-100', text: 'text-amber-700', label: '审核中' },
+    4: { bg: 'bg-red-100', text: 'text-red-700', label: '已驳回' },
   };
-  return styles[status] || { bg: 'bg-gray-100', text: 'text-gray-600', label: status };
-}
-
-function formatMoney(amount: number): string {
-  if (amount >= 10000) return '¥' + (amount / 10000).toFixed(1) + '万';
-  return '¥' + amount.toLocaleString();
+  return styles[status] || { bg: 'bg-gray-100', text: 'text-gray-600', label: '未知' };
 }
 
 function formatNumber(num: number): string {
@@ -251,19 +252,15 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-// 收入趋势
-const revenueTrend = computed(() => {
-  if (!model.value) return 0;
-  const { thisMonth, lastMonth } = model.value.revenue;
-  if (lastMonth === 0) return thisMonth > 0 ? 100 : 0;
-  return Math.round(((thisMonth - lastMonth) / lastMonth) * 100);
-});
-
-// 最大月收入（用于图表）
-const maxMonthRevenue = computed(() => {
-  if (!model.value) return 1500;
-  return Math.max(...model.value.revenue.history.map(h => h.amount), 1);
-});
+// 获取难度配置
+function getDifficultyConfig(difficulty: number) {
+  const config: Record<number, { label: string; color: string }> = {
+    1: { label: '简单', color: '#67C23A' },
+    2: { label: '中等', color: '#E6A23C' },
+    3: { label: '困难', color: '#F56C6C' },
+  };
+  return config[difficulty] || { label: '未知', color: '#909399' };
+}
 </script>
 
 <template>
@@ -305,7 +302,7 @@ const maxMonthRevenue = computed(() => {
         </button>
         <div class="flex items-center gap-3">
           <ElButton
-            v-if="model.status === 'draft'"
+            v-if="model.status === 0"
             type="primary"
             class="!bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full"
             @click="handlePublish"
@@ -316,7 +313,7 @@ const maxMonthRevenue = computed(() => {
             提交审核
           </ElButton>
           <ElButton
-            v-if="model.status === 'published'"
+            v-if="model.status === 1"
             plain
             class="!rounded-full"
             @click="handleUnpublish"
@@ -344,12 +341,14 @@ const maxMonthRevenue = computed(() => {
           <ElCard shadow="hover" class="!rounded-xl overflow-hidden">
             <div class="flex flex-col lg:flex-row gap-6">
               <!-- 封面 -->
-              <div class="relative w-full lg:w-72 h-48 rounded-xl overflow-hidden bg-gradient-to-br from-purple-100 to-indigo-100 flex-shrink-0">
+              <div class="relative w-full lg:w-72 h-48 rounded-xl overflow-hidden bg-gradient-to-br from-purple-100 to-indigo-100 flex-shrink-0 flex items-center justify-center">
                 <img
-                  :src="model.cover || '/images/default-model-cover.svg'"
+                  v-if="model.coverImage"
+                  :src="model.coverImage"
                   class="w-full h-full object-cover"
-                  @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-model-cover.svg'; }"
+                  @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.style.display = 'none'; }"
                 />
+                <div v-else class="text-5xl">{{ model.icon || '📝' }}</div>
                 <!-- 状态标签 -->
                 <span
                   :class="[
@@ -373,11 +372,11 @@ const maxMonthRevenue = computed(() => {
 
               <!-- 信息 -->
               <div class="flex-1">
-                <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ model.title }}</h1>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2">{{ model.name }}</h1>
                 <p class="text-gray-500 mb-4 leading-relaxed">{{ model.description }}</p>
-                
+
                 <!-- 标签 -->
-                <div class="flex flex-wrap gap-2 mb-4">
+                <div v-if="model.tags?.length" class="flex flex-wrap gap-2 mb-4">
                   <ElTag
                     v-for="tag in model.tags"
                     :key="tag"
@@ -391,20 +390,20 @@ const maxMonthRevenue = computed(() => {
                 <!-- 统计栏 -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-100">
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-purple-600">{{ formatNumber(model.stats.views) }}</div>
-                    <div class="text-sm text-gray-500">浏览量</div>
+                    <div class="text-2xl font-bold text-purple-600">{{ formatNumber(model.stats.usageCount) }}</div>
+                    <div class="text-sm text-gray-500">使用次数</div>
                   </div>
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-blue-600">{{ formatNumber(model.stats.adoptions) }}</div>
+                    <div class="text-2xl font-bold text-blue-600">{{ formatNumber(model.stats.adoptCount) }}</div>
                     <div class="text-sm text-gray-500">被采纳</div>
                   </div>
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-red-500">{{ formatNumber(model.stats.likes) }}</div>
+                    <div class="text-2xl font-bold text-red-500">{{ formatNumber(model.stats.likeCount) }}</div>
                     <div class="text-sm text-gray-500">获赞</div>
                   </div>
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-green-600">{{ formatNumber(model.stats.reviews) }}</div>
-                    <div class="text-sm text-gray-500">评价数</div>
+                    <div class="text-2xl font-bold text-green-600">{{ formatNumber(model.stats.commentCount) }}</div>
+                    <div class="text-sm text-gray-500">评论数</div>
                   </div>
                 </div>
               </div>
@@ -439,7 +438,7 @@ const maxMonthRevenue = computed(() => {
             </template>
             <div class="prose max-w-none">
               <p class="text-gray-600 leading-relaxed whitespace-pre-line">
-                {{ model.content.overview }}
+                {{ modelContent.overview || model.overview || '暂无概述' }}
               </p>
             </div>
           </ElCard>
@@ -452,9 +451,9 @@ const maxMonthRevenue = computed(() => {
                 <span class="font-semibold text-gray-700">使用步骤</span>
               </div>
             </template>
-            <div class="space-y-4">
+            <div v-if="modelContent.steps?.length" class="space-y-4">
               <div
-                v-for="(step, index) in model.content.steps"
+                v-for="(step, index) in modelContent.steps"
                 :key="index"
                 class="flex gap-4 p-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100"
               >
@@ -467,6 +466,9 @@ const maxMonthRevenue = computed(() => {
                 </div>
               </div>
             </div>
+            <div v-else class="text-center text-gray-400 py-8">
+              暂无使用步骤
+            </div>
           </ElCard>
 
           <!-- 案例 -->
@@ -477,9 +479,9 @@ const maxMonthRevenue = computed(() => {
                 <span class="font-semibold text-gray-700">实践案例</span>
               </div>
             </template>
-            <div class="space-y-6">
+            <div v-if="modelContent.examples?.length" class="space-y-6">
               <div
-                v-for="(example, index) in model.content.examples"
+                v-for="(example, index) in modelContent.examples"
                 :key="index"
                 class="p-5 rounded-xl bg-gradient-to-br from-gray-50 to-slate-50 border border-gray-100"
               >
@@ -492,42 +494,21 @@ const maxMonthRevenue = computed(() => {
                 <p class="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{{ example.content }}</p>
               </div>
             </div>
+            <div v-else class="text-center text-gray-400 py-8">
+              暂无实践案例
+            </div>
           </ElCard>
 
           <!-- 用户反馈 -->
           <ElCard v-if="activeTab === 'feedback'" shadow="hover" class="!rounded-xl">
             <template #header>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-lg">💬</span>
-                  <span class="font-semibold text-gray-700">用户反馈</span>
-                </div>
-                <span class="text-sm text-gray-400">共 {{ model.stats.reviews }} 条评价</span>
+              <div class="flex items-center gap-2">
+                <span class="text-lg">💬</span>
+                <span class="font-semibold text-gray-700">用户反馈</span>
               </div>
             </template>
-            <div class="space-y-4">
-              <div
-                v-for="feedback in mockFeedbacks"
-                :key="feedback.id"
-                class="p-4 rounded-xl bg-gray-50 border border-gray-100"
-              >
-                <div class="flex items-start gap-3">
-                  <ElAvatar size="small" :style="{ backgroundColor: '#7c3aed' }">
-                    {{ feedback.user.charAt(0) }}
-                  </ElAvatar>
-                  <div class="flex-1">
-                    <div class="flex items-center justify-between mb-1">
-                      <span class="font-medium text-gray-800">{{ feedback.user }}</span>
-                      <div class="flex items-center gap-1">
-                        <span v-for="i in feedback.rating" :key="i" class="text-amber-400 text-sm">★</span>
-                        <span v-for="i in (5 - feedback.rating)" :key="'e' + i" class="text-gray-300 text-sm">★</span>
-                      </div>
-                    </div>
-                    <p class="text-sm text-gray-600">{{ feedback.content }}</p>
-                    <p class="text-xs text-gray-400 mt-2">{{ feedback.date }}</p>
-                  </div>
-                </div>
-              </div>
+            <div class="text-center text-gray-400 py-8">
+              暂无用户反馈
             </div>
           </ElCard>
 
@@ -543,31 +524,21 @@ const maxMonthRevenue = computed(() => {
               <!-- 关键指标 -->
               <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="p-4 rounded-xl bg-purple-50 border border-purple-100 text-center">
-                  <div class="text-2xl font-bold text-purple-600 mb-1">{{ formatNumber(model.stats.views) }}</div>
-                  <div class="text-sm text-gray-500">总浏览</div>
+                  <div class="text-2xl font-bold text-purple-600 mb-1">{{ formatNumber(model.stats.usageCount) }}</div>
+                  <div class="text-sm text-gray-500">总使用</div>
                 </div>
                 <div class="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
-                  <div class="text-2xl font-bold text-blue-600 mb-1">{{ ((model.stats.adoptions / model.stats.views) * 100).toFixed(1) }}%</div>
-                  <div class="text-sm text-gray-500">采纳率</div>
+                  <div class="text-2xl font-bold text-blue-600 mb-1">{{ formatNumber(model.stats.adoptCount) }}</div>
+                  <div class="text-sm text-gray-500">采纳数</div>
+                </div>
+                <div class="p-4 rounded-xl bg-red-50 border border-red-100 text-center">
+                  <div class="text-2xl font-bold text-red-500 mb-1">{{ formatNumber(model.stats.likeCount) }}</div>
+                  <div class="text-sm text-gray-500">点赞数</div>
                 </div>
                 <div class="p-4 rounded-xl bg-green-50 border border-green-100 text-center">
-                  <div class="text-2xl font-bold text-green-600 mb-1">{{ ((model.stats.likes / model.stats.adoptions) * 100).toFixed(1) }}%</div>
-                  <div class="text-sm text-gray-500">好评率</div>
+                  <div class="text-2xl font-bold text-green-600 mb-1">{{ formatNumber(model.stats.commentCount) }}</div>
+                  <div class="text-sm text-gray-500">评论数</div>
                 </div>
-                <div class="p-4 rounded-xl bg-amber-50 border border-amber-100 text-center">
-                  <div class="text-2xl font-bold text-amber-600 mb-1">{{ (model.stats.practices / model.stats.adoptions).toFixed(1) }}</div>
-                  <div class="text-sm text-gray-500">人均练习</div>
-                </div>
-              </div>
-
-              <!-- 趋势提示 -->
-              <div class="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100">
-                <h4 class="font-medium text-gray-800 mb-2">💡 数据洞察</h4>
-                <ul class="text-sm text-gray-600 space-y-1">
-                  <li>• 本模型采纳率高于平均水平 35%</li>
-                  <li>• 用户平均练习次数持续增长</li>
-                  <li>• 建议增加更多实战案例提升互动</li>
-                </ul>
               </div>
             </div>
           </ElCard>
@@ -575,99 +546,35 @@ const maxMonthRevenue = computed(() => {
 
         <!-- 右侧边栏 -->
         <div class="w-80 flex-shrink-0 space-y-6 hidden lg:block">
-          <!-- 收入概览 -->
-          <ElCard v-if="!model.isFree" shadow="hover" class="!rounded-xl !bg-gradient-to-br from-green-50 to-emerald-50 !border-green-100">
-            <template #header>
-              <div class="flex items-center gap-2">
-                <span class="text-lg">💰</span>
-                <span class="font-semibold text-gray-700">收入概览</span>
-              </div>
-            </template>
-            <div class="space-y-4">
-              <div class="text-center py-3">
-                <div class="text-3xl font-bold text-green-600">{{ formatMoney(model.revenue.total) }}</div>
-                <div class="text-sm text-gray-500">累计收入</div>
-              </div>
-              <div class="flex items-center justify-between p-3 bg-white rounded-lg">
-                <span class="text-sm text-gray-500">本月收入</span>
-                <div class="flex items-center gap-2">
-                  <span class="font-semibold text-green-600">{{ formatMoney(model.revenue.thisMonth) }}</span>
-                  <span
-                    :class="[
-                      'text-xs px-2 py-0.5 rounded-full',
-                      revenueTrend >= 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
-                    ]"
-                  >
-                    {{ revenueTrend >= 0 ? '+' : '' }}{{ revenueTrend }}%
-                  </span>
-                </div>
-              </div>
-              
-              <!-- 收入趋势图 -->
-              <div class="pt-4">
-                <div class="text-sm text-gray-500 mb-3">近6个月趋势</div>
-                <div class="flex items-end gap-2 h-24">
-                  <div
-                    v-for="(item, index) in model.revenue.history"
-                    :key="index"
-                    class="flex-1 flex flex-col items-center gap-1"
-                  >
-                    <div
-                      class="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all duration-500"
-                      :style="{ height: `${(item.amount / maxMonthRevenue) * 100}%` }"
-                    />
-                    <span class="text-xs text-gray-400">{{ item.month.slice(5) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ElCard>
-
-          <!-- 模型表现 -->
-          <ElCard shadow="hover" class="!rounded-xl">
-            <template #header>
-              <div class="flex items-center gap-2">
-                <span class="text-lg">📈</span>
-                <span class="font-semibold text-gray-700">模型表现</span>
-              </div>
-            </template>
-            <div class="space-y-4">
-              <div>
-                <div class="flex items-center justify-between text-sm mb-2">
-                  <span class="text-gray-500">采纳率</span>
-                  <span class="text-purple-600 font-medium">{{ ((model.stats.adoptions / model.stats.views) * 100).toFixed(1) }}%</span>
-                </div>
-                <ElProgress :percentage="Math.min(100, Math.round((model.stats.adoptions / model.stats.views) * 100))" :stroke-width="8" color="#7c3aed" :show-text="false" />
-              </div>
-              <div>
-                <div class="flex items-center justify-between text-sm mb-2">
-                  <span class="text-gray-500">好评率</span>
-                  <span class="text-green-600 font-medium">{{ ((model.stats.likes / model.stats.adoptions) * 100).toFixed(1) }}%</span>
-                </div>
-                <ElProgress :percentage="Math.min(100, Math.round((model.stats.likes / model.stats.adoptions) * 100))" :stroke-width="8" color="#10b981" :show-text="false" />
-              </div>
-              <div>
-                <div class="flex items-center justify-between text-sm mb-2">
-                  <span class="text-gray-500">复购率</span>
-                  <span class="text-blue-600 font-medium">45%</span>
-                </div>
-                <ElProgress :percentage="45" :stroke-width="8" color="#3b82f6" :show-text="false" />
-              </div>
-            </div>
-          </ElCard>
-
-          <!-- 基本信息 -->
+          <!-- 模型信息 -->
           <ElCard shadow="hover" class="!rounded-xl">
             <template #header>
               <div class="flex items-center gap-2">
                 <span class="text-lg">ℹ️</span>
-                <span class="font-semibold text-gray-700">基本信息</span>
+                <span class="font-semibold text-gray-700">模型信息</span>
               </div>
             </template>
             <div class="space-y-3 text-sm">
               <div class="flex items-center justify-between">
                 <span class="text-gray-500">分类</span>
-                <span class="text-gray-800">{{ model.categoryName }}</span>
+                <span class="text-gray-800">{{ model.categoryName || '-' }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-500">难度</span>
+                <span
+                  class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  :style="{ backgroundColor: `${getDifficultyConfig(model.difficulty).color}20`, color: getDifficultyConfig(model.difficulty).color }"
+                >
+                  {{ getDifficultyConfig(model.difficulty).label }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-500">预计用时</span>
+                <span class="text-gray-800">{{ model.estimatedTime }} 分钟</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-gray-500">版本</span>
+                <span class="text-gray-800">v{{ model.version || '1.0' }}</span>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-gray-500">创建时间</span>
@@ -677,35 +584,37 @@ const maxMonthRevenue = computed(() => {
                 <span class="text-gray-500">最后更新</span>
                 <span class="text-gray-800">{{ formatDate(model.updatedAt) }}</span>
               </div>
-              <div class="flex items-center justify-between">
-                <span class="text-gray-500">模型 ID</span>
-                <span class="text-gray-400 font-mono text-xs">{{ model.id }}</span>
-              </div>
             </div>
           </ElCard>
 
-          <!-- 操作提示 -->
-          <ElCard shadow="hover" class="!rounded-xl !bg-gradient-to-br from-amber-50 to-orange-50 !border-amber-100">
+          <!-- 驳回原因（仅驳回状态显示） -->
+          <ElCard v-if="model.status === 4 && model.reviewNote" shadow="hover" class="!rounded-xl !bg-red-50 !border-red-100">
             <template #header>
               <div class="flex items-center gap-2">
-                <span class="text-lg">💡</span>
-                <span class="font-semibold text-amber-700">优化建议</span>
+                <span class="text-lg">⚠️</span>
+                <span class="font-semibold text-red-700">驳回原因</span>
               </div>
             </template>
-            <ul class="text-sm text-amber-800 space-y-2">
-              <li class="flex items-start gap-2">
-                <span class="text-amber-500 mt-1">•</span>
-                <span>添加更多实战案例可提升采纳率</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-amber-500 mt-1">•</span>
-                <span>定期更新内容保持模型活力</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <span class="text-amber-500 mt-1">•</span>
-                <span>回复用户反馈可提升好评率</span>
-              </li>
-            </ul>
+            <p class="text-sm text-red-600">{{ model.reviewNote }}</p>
+          </ElCard>
+
+          <!-- 作者信息 -->
+          <ElCard shadow="hover" class="!rounded-xl">
+            <template #header>
+              <div class="flex items-center gap-2">
+                <span class="text-lg">👤</span>
+                <span class="font-semibold text-gray-700">作者信息</span>
+              </div>
+            </template>
+            <div class="flex items-center gap-3">
+              <ElAvatar :size="48" class="bg-blue-500">
+                {{ model.author?.name?.charAt(0) || '?' }}
+              </ElAvatar>
+              <div>
+                <div class="font-medium text-gray-800">{{ model.author?.name || '未知作者' }}</div>
+                <div class="text-xs text-gray-400">模型创建者</div>
+              </div>
+            </div>
           </ElCard>
         </div>
       </div>

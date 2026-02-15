@@ -171,8 +171,14 @@ export async function getModelStatusCountsApi(config?: { signal?: AbortSignal })
 /**
  * 获取我的思维模型列表
  */
-export async function getMyThinkingModelListApi(params: ThinkingModelApi.ModelListParams = {}) {
-  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinkingModel/model/my', { params });
+export async function getMyThinkingModelListApi(
+  params: ThinkingModelApi.ModelListParams = {},
+  config?: { signal?: AbortSignal },
+) {
+  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinkingModel/model/my', {
+    params,
+    ...config,
+  });
 }
 
 /**

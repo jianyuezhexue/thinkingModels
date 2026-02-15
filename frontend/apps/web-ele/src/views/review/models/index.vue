@@ -148,29 +148,6 @@ const statusCounts = computed(() => {
   };
 });
 
-// 加载各状态的数量统计
-async function loadStatusCounts() {
-  // 取消之前的请求
-  statusCountsAbortController?.abort();
-  statusCountsAbortController = new AbortController();
-  const signal = statusCountsAbortController.signal;
-
-  try {
-    // 调用统计接口一次性获取所有状态数量
-    const res = await getModelStatusCountsApi({ signal });
-    console.log('StatusCounts response:', res);
-    statusTotalCounts.pending = res.pending;
-    statusTotalCounts.approved = res.approved;
-    statusTotalCounts.rejected = res.rejected;
-  } catch (error: any) {
-    // 如果是取消错误，静默处理
-    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
-      return;
-    }
-    console.error('加载状态统计失败:', error);
-    ElMessage.error('加载状态统计失败');
-  }
-}
 
 // ===================== 数据加载 =====================
 
@@ -287,8 +264,6 @@ async function submitReview() {
     ElMessage.success(`模型"${currentModel.value.name}"已${action}审核`);
 
     reviewDialogVisible.value = false;
-    // 更新状态统计
-    loadStatusCounts();
     loadModels();
   } catch (error) {
     console.error('审核失败:', error);
@@ -361,12 +336,10 @@ function handleTabChange() {
 onMounted(async () => {
   await loadCategories();
   loadModels();
-  loadStatusCounts();
 });
 
 // 组件卸载时取消所有请求
 onUnmounted(() => {
-  statusCountsAbortController?.abort();
   modelsAbortController?.abort();
 });
 </script>

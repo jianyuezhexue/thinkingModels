@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -20,35 +20,64 @@ import {
   ElPagination,
 } from 'element-plus';
 
-import { getModelListApi, adoptModelApi, purchaseModelApi, forkModelApi, type ModelApi } from '#/api';
+import {
+  getThinkingModelListApi,
+  forkThinkingModelApi,
+} from '#/api/thinking/model';
+import { getAllCategoriesApi } from '#/api/master/category';
+
+// 类型定义
+interface MarketModel {
+  id: number;
+  name: string;
+  description: string;
+  coverImage: string;
+  icon: string;
+  categoryId: number;
+  categoryName?: string;
+  tags: string[] | null;
+  price: number;
+  isFree: boolean;
+  stats: {
+    usageCount: number;
+    adoptCount: number;
+    likeCount: number;
+    commentCount: number;
+  };
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 请求取消控制器
+let abortController: AbortController | null = null;
 
 // 加载状态
 const loading = ref(false);
 
 // 模型列表数据
-const models = ref<ModelApi.ThinkingModel[]>([]);
+const models = ref<MarketModel[]>([]);
 const total = ref(0);
 
 // 筛选状态
 const searchQuery = ref('');
-const selectedCategory = ref('all');
-const selectedSort = ref<ModelApi.ModelListParams['sortBy']>('popular');
+const selectedCategory = ref<number | 'all'>('all');
+const selectedSort = ref<'popular' | 'newest' | 'mostAdopted' | 'mostLiked'>('popular');
 const priceFilter = ref<'all' | 'free' | 'paid'>('all');
 
 // 分页
 const currentPage = ref(1);
 const pageSize = ref(12);
 
-// 分类列表
-const categories = [
+// 分类列表（从后端获取）
+const categoryOptions = ref<{ value: number; label: string; icon: string }[]>([]);
+const categories = ref<{ id: number | 'all'; name: string; icon: string }[]>([
   { id: 'all', name: '全部模型', icon: '🎯' },
-  { id: 'business', name: '商业管理', icon: '💼' },
-  { id: 'strategy', name: '战略规划', icon: '🎯' },
-  { id: 'innovation', name: '创新思维', icon: '💡' },
-  { id: 'analysis', name: '分析工具', icon: '📊' },
-  { id: 'decision', name: '决策方法', icon: '⚖️' },
-  { id: 'creative', name: '创意构思', icon: '🎨' },
-];
+]);
 
 // 排序选项
 const sortOptions = [
@@ -65,40 +94,91 @@ const hotTags = ref([
 ]);
 
 // 推荐模型
-const recommendedModels = ref<ModelApi.ThinkingModel[]>([]);
+const recommendedModels = ref<MarketModel[]>([]);
 
 const router = useRouter();
 
+// 加载分类列表
+async function loadCategories() {
+  try {
+    const list = await getAllCategoriesApi();
+    categoryOptions.value = list.map((item) => ({
+      value: Number(item.id),
+      label: item.name,
+      icon: '📁',
+    }));
+    categories.value = [
+      { id: 'all', name: '全部模型', icon: '🎯' },
+      ...list.map((item) => ({
+        id: Number(item.id),
+        name: item.name,
+        icon: '📁',
+      })),
+    ];
+  } catch (error) {
+    console.error('加载分类列表失败:', error);
+  }
+}
+
 // 获取模型列表
 async function fetchModelList() {
+  // 取消之前的请求
+  abortController?.abort();
+  abortController = new AbortController();
+  const signal = abortController.signal;
+
   loading.value = true;
   try {
-    const params: ModelApi.ModelListParams = {
+    const params: Record<string, any> = {
       page: currentPage.value,
       pageSize: pageSize.value,
-      sortBy: selectedSort.value,
-      keyword: searchQuery.value || undefined,
+      status: 1, // 只获取已发布的模型
     };
 
-    if (selectedCategory.value !== 'all') {
-      params.category = selectedCategory.value;
+    // 搜索关键字
+    if (searchQuery.value) {
+      params.name = searchQuery.value;
     }
 
+    // 分类筛选
+    if (selectedCategory.value !== 'all') {
+      params.categoryId = selectedCategory.value;
+    }
+
+    // 价格筛选
     if (priceFilter.value === 'free') {
       params.isFree = true;
     } else if (priceFilter.value === 'paid') {
       params.isFree = false;
     }
 
-    const res = await getModelListApi(params);
-    models.value = res.list;
+    // 排序
+    if (selectedSort.value === 'popular') {
+      params.sortBy = 'usageCount';
+    } else if (selectedSort.value === 'newest') {
+      params.sortBy = 'createdAt';
+    } else if (selectedSort.value === 'mostAdopted') {
+      params.sortBy = 'adoptCount';
+    } else if (selectedSort.value === 'mostLiked') {
+      params.sortBy = 'likeCount';
+    }
+
+    const res = await getThinkingModelListApi(params, { signal });
+    models.value = res.list.map((item) => ({
+      ...item,
+      categoryName: categoryOptions.value.find((c) => c.value === item.categoryId)?.label || '',
+    }));
     total.value = res.total;
-    
+
     // 如果还没有推荐模型，取前3个作为推荐
     if (recommendedModels.value.length === 0 && res.list.length > 0) {
-      recommendedModels.value = res.list.slice(0, 3);
+      recommendedModels.value = models.value.slice(0, 3);
     }
-  } catch (error) {
+  } catch (error: any) {
+    // 如果是取消错误，静默处理
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
+      return;
+    }
     console.error('获取模型列表失败:', error);
     ElMessage.error('获取模型列表失败');
   } finally {
@@ -113,17 +193,34 @@ watch([searchQuery, selectedCategory, selectedSort, priceFilter], () => {
 });
 
 // 监听页码变化
-watch(currentPage, () => {
+watch([currentPage, pageSize], () => {
   fetchModelList();
 });
 
-// 页面加载时获取数据
-onMounted(() => {
+// 分页处理
+function handleSizeChange(size: number) {
+  pageSize.value = size;
   fetchModelList();
+}
+
+function handleCurrentChange(page: number) {
+  currentPage.value = page;
+  fetchModelList();
+}
+
+// 页面加载时获取数据
+onMounted(async () => {
+  await loadCategories();
+  await fetchModelList();
+});
+
+// 组件卸载时取消请求
+onUnmounted(() => {
+  abortController?.abort();
 });
 
 // 跳转到详情页
-function goToDetail(model: ModelApi.ThinkingModel) {
+function goToDetail(model: MarketModel) {
   router.push(`/market/${model.id}`);
 }
 
@@ -134,49 +231,31 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-// 加载模型到我的模型库
-async function handleLoad(model: ModelApi.ThinkingModel, event: Event) {
-  event.stopPropagation();
-  try {
-    await adoptModelApi(model.id);
-    ElMessage.success('已成功加载到您的模型库');
-  } catch (error) {
-    console.error('加载模型失败:', error);
-  }
-}
-
-// 购买模型
-async function handlePurchase(model: ModelApi.ThinkingModel, event: Event) {
-  event.stopPropagation();
-  try {
-    await purchaseModelApi(model.id);
-    ElMessage.success('购买成功！已添加到您的模型库');
-  } catch (error) {
-    console.error('购买失败:', error);
-  }
-}
-
 // 引用模型
-async function handleFork(model: ModelApi.ThinkingModel, event: Event) {
+async function handleFork(model: MarketModel, event: Event) {
   event.stopPropagation();
   try {
-    await forkModelApi(model.id);
+    await forkThinkingModelApi({
+      sourceModelId: model.id,
+      name: model.name + ' (副本)',
+    });
     ElMessage.success('已创建副本到您的模型库');
   } catch (error) {
     console.error('引用失败:', error);
+    ElMessage.error('引用失败');
   }
 }
 
 // 获取分类图标
-function getCategoryIcon(categoryId: string): string {
-  const cat = categories.find(c => c.id === categoryId);
+function getCategoryIcon(categoryId: number): string {
+  const cat = categories.value.find((c) => c.id === categoryId);
   return cat?.icon || '📁';
 }
 
 // 获取分类名称
-function getCategoryName(categoryId: string): string {
-  const cat = categories.find(c => c.id === categoryId);
-  return cat?.name || categoryId;
+function getCategoryName(categoryId: number): string {
+  const cat = categories.value.find((c) => c.id === categoryId);
+  return cat?.name || '';
 }
 </script>
 
@@ -304,10 +383,14 @@ function getCategoryName(categoryId: string): string {
             <!-- 封面图 -->
             <div class="relative h-36 overflow-hidden bg-gradient-to-br from-purple-50 to-indigo-100">
               <img
-                :src="model.cover || '/images/default-model-cover.svg'"
+                v-if="model.coverImage"
+                :src="model.coverImage"
                 class="h-full w-full object-cover transition-transform group-hover:scale-110"
-                @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-model-cover.svg'; }"
+                @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.style.display = 'none'; }"
               />
+              <div v-else class="h-full w-full flex items-center justify-center text-4xl">
+                {{ model.icon || '📝' }}
+              </div>
               <!-- 价格标签 -->
               <span
                 :class="[
@@ -319,7 +402,7 @@ function getCategoryName(categoryId: string): string {
               </span>
               <!-- 分类标签 -->
               <span class="absolute right-3 top-3 rounded-full px-2 py-1 text-xs bg-white/90 text-gray-700 shadow-sm">
-                {{ getCategoryIcon(model.category) }} {{ getCategoryName(model.category) }}
+                {{ getCategoryIcon(model.categoryId) }} {{ model.categoryName || getCategoryName(model.categoryId) }}
               </span>
             </div>
 
@@ -327,7 +410,7 @@ function getCategoryName(categoryId: string): string {
             <div class="p-4">
               <!-- 标题 -->
               <h3 class="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors line-clamp-1 text-lg">
-                {{ model.title }}
+                {{ model.name }}
               </h3>
               <!-- 描述 -->
               <p class="mt-2 text-sm text-gray-500 line-clamp-2 h-10">
@@ -335,7 +418,7 @@ function getCategoryName(categoryId: string): string {
               </p>
 
               <!-- 标签 -->
-              <div class="mt-3 flex flex-wrap gap-1">
+              <div v-if="model.tags?.length" class="mt-3 flex flex-wrap gap-1">
                 <ElTag
                   v-for="tag in model.tags.slice(0, 3)"
                   :key="tag"
@@ -349,7 +432,9 @@ function getCategoryName(categoryId: string): string {
 
               <!-- 作者 -->
               <div class="mt-3 flex items-center gap-2">
-                <ElAvatar :src="model.author.avatar" :size="24" />
+                <ElAvatar :src="model.author.avatar" :size="24" class="bg-blue-500">
+                  {{ model.author.name?.charAt(0) }}
+                </ElAvatar>
                 <span class="text-xs text-gray-600">{{ model.author.name }}</span>
               </div>
 
@@ -360,16 +445,16 @@ function getCategoryName(categoryId: string): string {
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
-                    {{ formatNumber(model.stats.adoptions) }}
+                    {{ formatNumber(model.stats.adoptCount) }}
                   </span>
                 </ElTooltip>
-                <ElTooltip content="练习次数">
+                <ElTooltip content="使用次数">
                   <span class="flex items-center gap-1">
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    {{ formatNumber(model.stats.practices) }}
+                    {{ formatNumber(model.stats.usageCount) }}
                   </span>
                 </ElTooltip>
                 <ElTooltip content="点赞数">
@@ -377,7 +462,7 @@ function getCategoryName(categoryId: string): string {
                     <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                     </svg>
-                    {{ formatNumber(model.stats.likes) }}
+                    {{ formatNumber(model.stats.likeCount) }}
                   </span>
                 </ElTooltip>
               </div>
@@ -385,31 +470,19 @@ function getCategoryName(categoryId: string): string {
               <!-- 操作按钮 -->
               <div class="mt-3 flex gap-2">
                 <ElButton
-                  v-if="model.isFree"
                   type="primary"
                   class="flex-1 !bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full"
                   size="small"
-                  @click="handleLoad(model, $event)"
+                  @click="handleFork(model, $event)"
                 >
-                  立即使用
-                </ElButton>
-                <ElButton
-                  v-else
-                  type="success"
-                  class="flex-1 !rounded-full"
-                  size="small"
-                  @click="handlePurchase(model, $event)"
-                >
-                  购买 ¥{{ model.price }}
+                  {{ model.isFree ? '立即使用' : '引用创建' }}
                 </ElButton>
                 <ElButton
                   size="small"
                   class="!rounded-full"
-                  @click="handleFork(model, $event)"
+                  @click="goToDetail(model); $event.stopPropagation()"
                 >
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>
-                  </svg>
+                  详情
                 </ElButton>
               </div>
             </div>
@@ -417,13 +490,16 @@ function getCategoryName(categoryId: string): string {
         </div>
 
         <!-- 分页 -->
-        <div v-if="total > pageSize" class="mt-8 flex justify-center">
+        <div v-if="total > 0" class="mt-8 flex justify-center">
           <ElPagination
             v-model:current-page="currentPage"
-            :page-size="pageSize"
+            v-model:page-size="pageSize"
             :total="total"
-            layout="prev, pager, next"
+            :page-sizes="[12, 24, 48]"
+            layout="total, sizes, prev, pager, next, jumper"
             background
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
           />
         </div>
       </div>
@@ -473,23 +549,24 @@ function getCategoryName(categoryId: string): string {
             </div>
           </template>
           <div class="space-y-3">
-            <div
-              v-for="model in recommendedModels"
-              :key="model.id"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-              @click="goToDetail(model)"
-            >
-              <div class="w-12 h-12 rounded-lg overflow-hidden bg-purple-100 flex-shrink-0">
-                <img
-                  :src="model.cover"
-                  class="w-full h-full object-cover"
-                  @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.style.display = 'none'; }"
-                />
+            <template v-if="recommendedModels.length > 0">
+              <div
+                v-for="model in recommendedModels"
+                :key="model.id"
+                class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                @click="goToDetail(model)"
+              >
+                <div class="w-12 h-12 rounded-lg overflow-hidden bg-purple-100 flex items-center justify-center flex-shrink-0 text-xl">
+                  {{ model.icon || '📝' }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-gray-800 line-clamp-1">{{ model.name }}</div>
+                  <div class="text-xs text-gray-400 mt-0.5">{{ formatNumber(model.stats.adoptCount) }} 人采纳</div>
+                </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-gray-800 line-clamp-1">{{ model.title }}</div>
-                <div class="text-xs text-gray-400 mt-0.5">{{ formatNumber(model.stats.adoptions) }} 人采纳</div>
-              </div>
+            </template>
+            <div v-else class="text-center text-gray-400 py-4">
+              暂无推荐模型
             </div>
           </div>
         </ElCard>

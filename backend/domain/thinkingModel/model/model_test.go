@@ -65,15 +65,10 @@ func TestCreateModel_WithoutCurrUserId(t *testing.T) {
 // TestModelEntity_Fields 测试模型字段定义
 func TestModelEntity_Fields(t *testing.T) {
 	entity := &ModelEntity{
-		Name:          "测试模型",
-		Description:   "这是一个测试模型",
-		CoverImage:    "https://example.com/cover.jpg",
-		Price:         99.0,
-		AuthorId:      1,
-		AuthorName:    "测试作者",
-		CategoryId:    1,
-		Difficulty:    1,
-		EstimatedTime: 30,
+		Name:       "测试模型",
+		Price:      99.0,
+		AuthorId:   1,
+		AuthorName: "测试作者",
 	}
 
 	assert.Equal(t, "测试模型", entity.Name)

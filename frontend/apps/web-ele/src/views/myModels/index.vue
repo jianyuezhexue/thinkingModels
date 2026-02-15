@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -17,31 +17,39 @@ import {
   ElSkeletonItem,
   ElPagination,
   ElMessageBox,
-  ElProgress,
 } from 'element-plus';
+
+import {
+  getMyThinkingModelListApi,
+  getModelStatusCountsApi,
+  publishThinkingModelApi,
+  deleteThinkingModelApi,
+} from '#/api/thinking/model';
+import { getAllCategoriesApi } from '#/api/master/category';
 
 // 类型定义
 interface MyModel {
-  id: string;
-  title: string;
+  id: number;
+  name: string;
   description: string;
-  cover: string;
-  category: string;
-  categoryName: string;
-  tags: string[];
-  status: 'published' | 'draft' | 'under_review' | 'rejected';
+  coverImage: string;
+  icon: string;
+  categoryId: number;
+  categoryName?: string;
+  tags: string[] | null;
+  status: number; // 0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回
   price: number;
   isFree: boolean;
   stats: {
-    adoptions: number;
-    practices: number;
-    likes: number;
-    reviews: number;
+    usageCount: number;
+    adoptCount: number;
+    likeCount: number;
+    commentCount: number;
   };
-  revenue: {
-    total: number;
-    thisMonth: number;
-    lastMonth: number;
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
   };
   createdAt: string;
   updatedAt: string;
@@ -51,14 +59,16 @@ interface StatsSummary {
   totalModels: number;
   publishedModels: number;
   draftModels: number;
-  totalRevenue: number;
-  monthlyRevenue: number;
+  underReviewModels: number;
   totalAdoptions: number;
   totalLikes: number;
 }
 
 // 路由
 const router = useRouter();
+
+// 请求取消控制器
+let abortController: AbortController | null = null;
 
 // 加载状态
 const loading = ref(false);
@@ -69,13 +79,12 @@ const total = ref(0);
 
 // 统计数据
 const stats = ref<StatsSummary>({
-  totalModels: 12,
-  publishedModels: 8,
-  draftModels: 3,
-  totalRevenue: 15860,
-  monthlyRevenue: 2340,
-  totalAdoptions: 3456,
-  totalLikes: 892,
+  totalModels: 0,
+  publishedModels: 0,
+  draftModels: 0,
+  underReviewModels: 0,
+  totalAdoptions: 0,
+  totalLikes: 0,
 });
 
 // 分页
@@ -84,161 +93,106 @@ const pageSize = ref(12);
 
 // 筛选
 const searchKeyword = ref('');
-const activeStatus = ref<'all' | 'published' | 'draft' | 'under_review'>('all');
-const sortBy = ref<'newest' | 'popular' | 'revenue' | 'adoptions'>('newest');
+const activeStatus = ref<number | 'all'>('all');
+const sortBy = ref<'newest' | 'popular' | 'adoptions'>('newest');
 
-// 状态 Tab
+// 分类选项
+const categoryOptions = ref<{ value: number; label: string }[]>([]);
+const selectedCategory = ref<number | ''>('');
+
+// 状态 Tab（后端状态值：0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回）
 const statusTabs = [
-  { id: 'all', label: '全部模型', icon: '📦' },
-  { id: 'published', label: '已发布', icon: '✅' },
-  { id: 'draft', label: '草稿箱', icon: '📝' },
-  { id: 'under_review', label: '审核中', icon: '⏳' },
+  { id: 'all' as const, status: undefined, label: '全部模型', icon: '📦' },
+  { id: 1, status: 1, label: '已发布', icon: '✅' },
+  { id: 0, status: 0, label: '草稿箱', icon: '📝' },
+  { id: 3, status: 3, label: '审核中', icon: '⏳' },
 ];
 
 // 排序选项
 const sortOptions = [
   { value: 'newest', label: '最新创建' },
   { value: 'popular', label: '最受欢迎' },
-  { value: 'revenue', label: '收入最高' },
   { value: 'adoptions', label: '采纳最多' },
 ];
 
+// 加载分类列表
+async function loadCategories() {
+  try {
+    const list = await getAllCategoriesApi();
+    categoryOptions.value = list.map((item) => ({
+      value: Number(item.id),
+      label: item.name,
+    }));
+  } catch (error) {
+    console.error('加载分类列表失败:', error);
+  }
+}
 
-
-// 模拟数据
-const mockModels: MyModel[] = [
-  {
-    id: '1',
-    title: 'SWOT 分析思维模型',
-    description: '经典的战略分析工具，帮助分析企业或项目的优势、劣势、机会和威胁，适用于商业决策和个人发展规划。',
-    cover: '/images/swot-cover.svg',
-    category: 'business',
-    categoryName: '商业管理',
-    tags: ['战略', '分析', '商业'],
-    status: 'published',
-    price: 29,
-    isFree: false,
-    stats: { adoptions: 1256, practices: 3421, likes: 328, reviews: 56 },
-    revenue: { total: 8560, thisMonth: 1200, lastMonth: 980 },
-    createdAt: '2024-01-15T08:00:00Z',
-    updatedAt: '2024-02-10T10:30:00Z',
-  },
-  {
-    id: '2',
-    title: '第一性原理思维',
-    description: '埃隆·马斯克推崇的创新思维方式，从最基本的原理出发思考问题，打破常规思维定式。',
-    cover: '/images/first-principles-cover.svg',
-    category: 'innovation',
-    categoryName: '创新思维',
-    tags: ['创新', '思维', '决策'],
-    status: 'published',
-    price: 0,
-    isFree: true,
-    stats: { adoptions: 2100, practices: 5678, likes: 445, reviews: 89 },
-    revenue: { total: 0, thisMonth: 0, lastMonth: 0 },
-    createdAt: '2024-01-20T14:00:00Z',
-    updatedAt: '2024-02-08T16:45:00Z',
-  },
-  {
-    id: '3',
-    title: '逆向思维模型',
-    description: '从结果倒推过程的思维方式，帮助发现潜在风险和盲点，特别适用于项目规划和风险管理。',
-    cover: '/images/reverse-thinking-cover.svg',
-    category: 'strategy',
-    categoryName: '战略规划',
-    tags: ['策略', '风险', '规划'],
-    status: 'published',
-    price: 19,
-    isFree: false,
-    stats: { adoptions: 567, practices: 1234, likes: 156, reviews: 23 },
-    revenue: { total: 2340, thisMonth: 450, lastMonth: 380 },
-    createdAt: '2024-02-01T09:00:00Z',
-    updatedAt: '2024-02-12T11:20:00Z',
-  },
-  {
-    id: '4',
-    title: '金字塔原理',
-    description: 'MECE法则和金字塔结构的表达方法，让你的思考更有逻辑，表达更清晰有力。',
-    cover: '/images/pyramid-cover.svg',
-    category: 'analysis',
-    categoryName: '分析工具',
-    tags: ['逻辑', '表达', '沟通'],
-    status: 'draft',
-    price: 39,
-    isFree: false,
-    stats: { adoptions: 0, practices: 0, likes: 0, reviews: 0 },
-    revenue: { total: 0, thisMonth: 0, lastMonth: 0 },
-    createdAt: '2024-02-15T10:00:00Z',
-    updatedAt: '2024-02-15T10:00:00Z',
-  },
-  {
-    id: '5',
-    title: '系统思维模型',
-    description: '从全局视角理解复杂系统，识别反馈回路和杠杆点，适用于复杂问题分析和组织管理。',
-    cover: '/images/system-thinking-cover.svg',
-    category: 'analysis',
-    categoryName: '分析工具',
-    tags: ['系统', '复杂', '管理'],
-    status: 'under_review',
-    price: 49,
-    isFree: false,
-    stats: { adoptions: 0, practices: 0, likes: 0, reviews: 0 },
-    revenue: { total: 0, thisMonth: 0, lastMonth: 0 },
-    createdAt: '2024-02-18T13:00:00Z',
-    updatedAt: '2024-02-18T13:00:00Z',
-  },
-  {
-    id: '6',
-    title: '机会成本分析',
-    description: '帮助理解决策的真实代价，评估不同选择的隐性成本，做出更明智的资源配置决策。',
-    cover: '/images/opportunity-cost-cover.svg',
-    category: 'decision',
-    categoryName: '决策方法',
-    tags: ['决策', '成本', '经济'],
-    status: 'published',
-    price: 15,
-    isFree: false,
-    stats: { adoptions: 533, practices: 1456, likes: 98, reviews: 18 },
-    revenue: { total: 1600, thisMonth: 280, lastMonth: 320 },
-    createdAt: '2024-02-05T11:00:00Z',
-    updatedAt: '2024-02-11T09:15:00Z',
-  },
-];
+// 加载统计数据
+async function loadStats() {
+  try {
+    const counts = await getModelStatusCountsApi();
+    const allModels = models.value;
+    stats.value = {
+      totalModels: counts.pending + counts.approved + counts.rejected,
+      publishedModels: counts.approved,
+      draftModels: allModels.filter(m => m.status === 0).length,
+      underReviewModels: counts.pending,
+      totalAdoptions: allModels.reduce((sum, m) => sum + m.stats.adoptCount, 0),
+      totalLikes: allModels.reduce((sum, m) => sum + m.stats.likeCount, 0),
+    };
+  } catch (error) {
+    console.error('加载统计数据失败:', error);
+  }
+}
 
 // 获取模型列表
 async function fetchModels() {
+  // 取消之前的请求
+  abortController?.abort();
+  abortController = new AbortController();
+  const signal = abortController.signal;
+
   loading.value = true;
   try {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    let filtered = [...mockModels];
+    const params: Record<string, any> = {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+    };
+
+    // 状态筛选
     if (activeStatus.value !== 'all') {
-      filtered = filtered.filter(m => m.status === activeStatus.value);
+      params.status = activeStatus.value;
     }
+
+    // 关键字搜索
     if (searchKeyword.value) {
-      const kw = searchKeyword.value.toLowerCase();
-      filtered = filtered.filter(m =>
-        m.title.toLowerCase().includes(kw) ||
-        m.description.toLowerCase().includes(kw)
-      );
+      params.name = searchKeyword.value;
     }
-    
+
+    // 分类筛选
+    if (selectedCategory.value !== '') {
+      params.categoryId = selectedCategory.value;
+    }
+
     // 排序
     if (sortBy.value === 'popular') {
-      filtered.sort((a, b) => b.stats.adoptions - a.stats.adoptions);
-    } else if (sortBy.value === 'revenue') {
-      filtered.sort((a, b) => b.revenue.total - a.revenue.total);
+      params.sortBy = 'likeCount';
     } else if (sortBy.value === 'adoptions') {
-      filtered.sort((a, b) => b.stats.adoptions - a.stats.adoptions);
-    } else {
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      params.sortBy = 'adoptCount';
     }
-    
-    const start = (currentPage.value - 1) * pageSize.value;
-    const end = start + pageSize.value;
-    models.value = filtered.slice(start, end);
-    total.value = filtered.length;
-  } catch (error) {
+
+    const res = await getMyThinkingModelListApi(params, { signal });
+    models.value = res.list.map((item) => ({
+      ...item,
+      categoryName: categoryOptions.value.find((c) => c.value === item.categoryId)?.label || '',
+    }));
+    total.value = res.total;
+  } catch (error: any) {
+    // 如果是取消错误，静默处理
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
+      return;
+    }
     console.error('获取模型列表失败:', error);
     ElMessage.error('获取模型列表失败');
   } finally {
@@ -246,8 +200,9 @@ async function fetchModels() {
   }
 }
 
+
 // 监听变化
-watch([searchKeyword, activeStatus, sortBy], () => {
+watch([searchKeyword, activeStatus, sortBy, selectedCategory], () => {
   currentPage.value = 1;
   fetchModels();
 });
@@ -256,8 +211,25 @@ watch([currentPage, pageSize], () => {
   fetchModels();
 });
 
-onMounted(() => {
+// 分页处理
+function handleSizeChange(size: number) {
+  pageSize.value = size;
   fetchModels();
+}
+
+function handleCurrentChange(page: number) {
+  currentPage.value = page;
+  fetchModels();
+}
+
+onMounted(async () => {
+  await loadCategories();
+  await fetchModels();
+  loadStats();
+});
+
+onUnmounted(() => {
+  abortController?.abort();
 });
 
 // 操作函数
@@ -278,14 +250,19 @@ async function handleDelete(model: MyModel, event: Event) {
   event.stopPropagation();
   try {
     await ElMessageBox.confirm(
-      `确定要删除模型「${model.title}」吗？此操作不可恢复。`,
+      `确定要删除模型「${model.name}」吗？此操作不可恢复。`,
       '删除确认',
       { type: 'warning' }
     );
+    await deleteThinkingModelApi({ ids: [model.id] });
     ElMessage.success('模型已删除');
     fetchModels();
-  } catch {
-    // 用户取消
+    loadStats();
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error);
+      ElMessage.error('删除失败');
+    }
   }
 }
 
@@ -293,31 +270,32 @@ async function handlePublish(m: MyModel, event: Event) {
   event.stopPropagation();
   try {
     await ElMessageBox.confirm(
-      `提交「${m.title}」审核后，模型将在审核通过后发布到市场。确定提交吗？`,
+      `提交「${m.name}」审核后，模型将在审核通过后发布到市场。确定提交吗？`,
       '提交审核',
       { type: 'info' }
     );
+    await publishThinkingModelApi({ id: m.id });
     ElMessage.success('模型已提交审核');
     fetchModels();
-  } catch {
-    // 用户取消
+    loadStats();
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      console.error('提交审核失败:', error);
+      ElMessage.error('提交审核失败');
+    }
   }
 }
 
-// 工具函数
-function getStatusStyle(status: string): { bg: string; text: string; label: string } {
-  const styles: Record<string, { bg: string; text: string; label: string }> = {
-    published: { bg: 'bg-green-100', text: 'text-green-700', label: '已发布' },
-    draft: { bg: 'bg-gray-100', text: 'text-gray-600', label: '草稿' },
-    under_review: { bg: 'bg-amber-100', text: 'text-amber-700', label: '审核中' },
-    rejected: { bg: 'bg-red-100', text: 'text-red-700', label: '已驳回' },
+// 工具函数 - 状态映射：0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回
+function getStatusStyle(status: number): { bg: string; text: string; label: string } {
+  const styles: Record<number, { bg: string; text: string; label: string }> = {
+    0: { bg: 'bg-gray-100', text: 'text-gray-600', label: '草稿' },
+    1: { bg: 'bg-green-100', text: 'text-green-700', label: '已发布' },
+    2: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '已下架' },
+    3: { bg: 'bg-amber-100', text: 'text-amber-700', label: '审核中' },
+    4: { bg: 'bg-red-100', text: 'text-red-700', label: '已驳回' },
   };
-  return styles[status] || { bg: 'bg-gray-100', text: 'text-gray-600', label: status };
-}
-
-function formatMoney(amount: number): string {
-  if (amount >= 10000) return '¥' + (amount / 10000).toFixed(1) + '万';
-  return '¥' + amount.toLocaleString();
+  return styles[status] || { bg: 'bg-gray-100', text: 'text-gray-600', label: '未知' };
 }
 
 function formatNumber(num: number): string {
@@ -352,12 +330,12 @@ function formatNumber(num: number): string {
       <div class="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500">累计收入</p>
-            <p class="mt-1 text-2xl font-bold text-green-600">{{ formatMoney(stats.totalRevenue) }}</p>
-            <p class="mt-1 text-xs text-green-500">本月 +{{ formatMoney(stats.monthlyRevenue) }}</p>
+            <p class="text-sm text-gray-500">审核中</p>
+            <p class="mt-1 text-2xl font-bold text-amber-600">{{ stats.underReviewModels }}</p>
+            <p class="mt-1 text-xs text-amber-500">等待审核</p>
           </div>
-          <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-            <span class="text-2xl">💰</span>
+          <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+            <span class="text-2xl">⏳</span>
           </div>
         </div>
       </div>
@@ -483,10 +461,14 @@ function formatNumber(num: number): string {
             <!-- 封面 -->
             <div class="relative h-32 overflow-hidden bg-gradient-to-br from-purple-100 to-indigo-100">
               <img
-                :src="model.cover || '/images/default-model-cover.svg'"
+                v-if="model.coverImage"
+                :src="model.coverImage"
                 class="h-full w-full object-cover transition-transform group-hover:scale-110"
-                @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.src = '/images/default-model-cover.svg'; }"
+                @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.style.display = 'none'; }"
               />
+              <div v-else class="h-full w-full flex items-center justify-center text-4xl">
+                {{ model.icon || '📝' }}
+              </div>
               <!-- 状态标签 -->
               <span
                 :class="[
@@ -511,14 +493,14 @@ function formatNumber(num: number): string {
             <!-- 内容 -->
             <div class="p-4">
               <h3 class="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors line-clamp-1">
-                {{ model.title }}
+                {{ model.name }}
               </h3>
               <p class="mt-1 text-sm text-gray-500 line-clamp-2 h-10">
                 {{ model.description }}
               </p>
 
               <!-- 标签 -->
-              <div class="mt-2 flex flex-wrap gap-1">
+              <div v-if="model.tags?.length" class="mt-2 flex flex-wrap gap-1">
                 <ElTag
                   v-for="tag in model.tags.slice(0, 2)"
                   :key="tag"
@@ -531,21 +513,18 @@ function formatNumber(num: number): string {
               </div>
 
               <!-- 统计 -->
-              <div v-if="model.status === 'published'" class="mt-3 flex items-center gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
+              <div v-if="model.status === 1" class="mt-3 flex items-center gap-4 text-xs text-gray-500 border-t border-gray-100 pt-3">
                 <span class="flex items-center gap-1">
                   <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                   </svg>
-                  {{ formatNumber(model.stats.adoptions) }}
+                  {{ formatNumber(model.stats.adoptCount) }}
                 </span>
                 <span class="flex items-center gap-1 text-red-400">
                   <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                   </svg>
-                  {{ formatNumber(model.stats.likes) }}
-                </span>
-                <span v-if="!model.isFree" class="flex items-center gap-1 text-green-600 font-medium">
-                  💰 {{ formatMoney(model.revenue.total) }}
+                  {{ formatNumber(model.stats.likeCount) }}
                 </span>
               </div>
 
@@ -555,7 +534,7 @@ function formatNumber(num: number): string {
                   编辑
                 </ElButton>
                 <ElButton
-                  v-if="model.status === 'draft'"
+                  v-if="model.status === 0"
                   type="primary"
                   size="small"
                   class="flex-1 !bg-purple-600 !border-purple-600 !rounded-full"
@@ -574,13 +553,16 @@ function formatNumber(num: number): string {
         </div>
 
         <!-- 分页 -->
-        <div v-if="total > pageSize" class="flex justify-center pt-4">
+        <div v-if="total > 0" class="flex justify-center pt-4">
           <ElPagination
             v-model:current-page="currentPage"
-            :page-size="pageSize"
+            v-model:page-size="pageSize"
             :total="total"
-            layout="prev, pager, next"
+            :page-sizes="[12, 24, 48]"
+            layout="total, sizes, prev, pager, next, jumper"
             background
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
           />
         </div>
       </div>
@@ -601,33 +583,6 @@ function formatNumber(num: number): string {
           </div>
         </ElCard>
 
-        <!-- 收入概览 -->
-        <ElCard shadow="hover" class="!rounded-xl">
-          <template #header>
-            <div class="flex items-center gap-2">
-              <span class="text-lg">💰</span>
-              <span class="font-semibold text-gray-700">收入概览</span>
-            </div>
-          </template>
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">累计收入</span>
-              <span class="text-lg font-bold text-green-600">{{ formatMoney(stats.totalRevenue) }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">本月收入</span>
-              <span class="font-semibold text-green-500">+{{ formatMoney(stats.monthlyRevenue) }}</span>
-            </div>
-            <div class="pt-3 border-t border-gray-100">
-              <div class="flex items-center justify-between text-sm mb-2">
-                <span class="text-gray-500">收入目标</span>
-                <span class="text-purple-600">¥5,000 / 月</span>
-              </div>
-              <ElProgress :percentage="Math.min(100, Math.floor(stats.monthlyRevenue / 50))" :stroke-width="8" color="#7c3aed" />
-            </div>
-          </div>
-        </ElCard>
-
         <!-- 热门模型 -->
         <ElCard shadow="hover" class="!rounded-xl">
           <template #header>
@@ -637,23 +592,24 @@ function formatNumber(num: number): string {
             </div>
           </template>
           <div class="space-y-3">
-            <div
-              v-for="model in mockModels.filter(m => m.status === 'published').slice(0, 3)"
-              :key="model.id"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-              @click="goToDetail(model)"
-            >
-              <div class="w-10 h-10 rounded-lg overflow-hidden bg-purple-100 flex-shrink-0">
-                <img
-                  :src="model.cover"
-                  class="w-full h-full object-cover"
-                  @error="(e) => { const img = e.target as HTMLImageElement; if (img) img.style.display = 'none'; }"
-                />
+            <template v-if="models.filter(m => m.status === 1).length > 0">
+              <div
+                v-for="model in models.filter(m => m.status === 1).slice(0, 3)"
+                :key="model.id"
+                class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                @click="goToDetail(model)"
+              >
+                <div class="w-10 h-10 rounded-lg overflow-hidden bg-purple-100 flex items-center justify-center flex-shrink-0 text-xl">
+                  {{ model.icon || '📝' }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm font-medium text-gray-800 line-clamp-1">{{ model.name }}</div>
+                  <div class="text-xs text-gray-400">{{ formatNumber(model.stats.adoptCount) }} 采纳</div>
+                </div>
               </div>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-gray-800 line-clamp-1">{{ model.title }}</div>
-                <div class="text-xs text-gray-400">{{ formatNumber(model.stats.adoptions) }} 采纳</div>
-              </div>
+            </template>
+            <div v-else class="text-center text-gray-400 py-4">
+              暂无已发布的模型
             </div>
           </div>
         </ElCard>
