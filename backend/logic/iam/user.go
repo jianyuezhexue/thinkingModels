@@ -2,6 +2,7 @@ package iam
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"thinkingModels/domain/iam/user"
@@ -190,34 +191,55 @@ func (l *UserLogic) Del(ids []uint64) (any, error) {
 	return nil, err
 }
 
-// Login 用户登录
+// Login 用户登录（账号不存在时自动注册）
 func (l *UserLogic) Login(req *user.LoginRequest) (*user.LoginResponse, error) {
 	// 1. 根据用户名查询用户
 	userEntity := user.NewUserEntity(l.Ctx)
 	cond := userEntity.MakeConditon(user.SearchUser{Username: req.Username})
 	dbUser, err := userEntity.LoadData(cond)
+
+	// 2. 如果用户不存在，自动注册
 	if err != nil {
-		return nil, errors.New("用户名或密码错误")
+		// base 库 LoadData 返回的错误格式: "[表名]查询的数据不存在,请检查"
+		if strings.Contains(err.Error(), "不存在") {
+			// 自动注册新用户
+			registerReq := &user.RegisterRequest{
+				Username: req.Username,
+				Password: req.Password,
+				Nickname: req.Username, // 默认昵称使用用户名
+			}
+			_, err = l.Create(registerReq)
+			if err != nil {
+				return nil, errors.New("自动注册失败: " + err.Error())
+			}
+			// 重新查询新创建的用户
+			dbUser, err = userEntity.LoadData(cond)
+			if err != nil {
+				return nil, errors.New("用户创建后查询失败")
+			}
+		} else {
+			return nil, errors.New("用户名或密码错误")
+		}
 	}
 
-	// 2. 检查用户状态
+	// 3. 检查用户状态
 	if dbUser.Status == 0 {
 		return nil, errors.New("账号已被禁用")
 	}
 
-	// 3. 验证密码（实体方法）
+	// 4. 验证密码（实体方法）
 	if !dbUser.VerifyPassword(req.Password) {
 		return nil, errors.New("用户名或密码错误")
 	}
 
-	// 4. 更新登录信息（实体方法）
+	// 5. 更新登录信息（实体方法）
 	dbUser.UpdateLoginInfo(l.Ctx.ClientIP())
 	_, err = dbUser.Update()
 	if err != nil {
 		return nil, err
 	}
 
-	// 5. 生成JWT Token（实体方法 - 充血模型）
+	// 6. 生成JWT Token（实体方法 - 充血模型）
 	tokenPair, err := dbUser.GenerateToken()
 	if err != nil {
 		return nil, errors.New("Token生成失败")

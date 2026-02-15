@@ -168,6 +168,24 @@ export const useResourcesStore = defineStore('resources', () => {
     return presetCovers.value[randomIndex]!;
   }
 
+  /** 重置 store 状态 */
+  function $reset() {
+    // 重置为默认标签列表
+    suggestedTags.value = [
+      '战略',
+      '分析',
+      '思维',
+      '创新',
+      '管理',
+      '决策',
+      '效率',
+      '逻辑',
+      '沟通',
+      '规划',
+    ];
+    // 预设封面是静态的，不需要重置
+  }
+
   return {
     // 推荐标签
     suggestedTags,
@@ -177,5 +195,8 @@ export const useResourcesStore = defineStore('resources', () => {
     coversByCategory,
     getCoversByCategory,
     getRandomCover,
+
+    // 重置方法
+    $reset,
   };
 });

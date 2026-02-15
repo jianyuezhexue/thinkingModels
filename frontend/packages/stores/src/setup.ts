@@ -55,6 +55,13 @@ export function resetAllStores() {
   }
   const allStores = (pinia as any)._s;
   for (const [_key, store] of allStores) {
-    store.$reset();
+    // 检查 store 是否有 $reset 方法（setup 语法定义的 store 可能没有）
+    if (typeof store.$reset === 'function') {
+      try {
+        store.$reset();
+      } catch (error) {
+        console.warn(`Failed to reset store "${_key}":`, error);
+      }
+    }
   }
 }

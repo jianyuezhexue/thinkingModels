@@ -5,6 +5,7 @@ import (
 	"thinkingModels/api/master"
 	"thinkingModels/api/subject"
 	"thinkingModels/api/practice"
+	"thinkingModels/api/thinkingModel"
 
 	"github.com/gin-gonic/gin"
 )
@@ -100,6 +101,43 @@ func AuthorizedRouters() {
 		analysisGroup.PUT("", analysisApi.Update)
 		analysisGroup.GET("/:id", analysisApi.Get)
 		analysisGroup.DELETE("", analysisApi.Del)
+
+		// ==================== ThinkingModel 模块 ====================
+		// 思维模型管理
+		tmModelApi := thinkingModel.NewModel()
+		tmModelGroup := api.Group("/thinkingModel/model")
+		tmModelGroup.GET("/list", tmModelApi.List)
+		tmModelGroup.GET("/my", tmModelApi.ListMy)
+		tmModelGroup.GET("/code/:code", tmModelApi.GetByCode)
+		tmModelGroup.POST("", tmModelApi.Create)
+		tmModelGroup.PUT("", tmModelApi.Update)
+		tmModelGroup.GET("/:id", tmModelApi.Get)
+		tmModelGroup.DELETE("", tmModelApi.Del)
+		tmModelGroup.POST("/publish", tmModelApi.Publish)
+		tmModelGroup.POST("/unpublish/:id", tmModelApi.Unpublish)
+		tmModelGroup.POST("/fork", tmModelApi.Fork)
+
+		// 思维模型分类管理
+		tmCategoryApi := thinkingModel.NewCategory()
+		tmCategoryGroup := api.Group("/thinkingModel/category")
+		tmCategoryGroup.GET("/all", tmCategoryApi.All)
+		tmCategoryGroup.GET("/list", tmCategoryApi.List)
+		tmCategoryGroup.POST("", tmCategoryApi.Create)
+		tmCategoryGroup.PUT("", tmCategoryApi.Update)
+		tmCategoryGroup.GET("/:id", tmCategoryApi.Get)
+		tmCategoryGroup.DELETE("", tmCategoryApi.Del)
+		tmCategoryGroup.POST("/increaseHeat", tmCategoryApi.IncreaseHeat)
+
+		// 思维模型标签管理
+		tmModelTagApi := thinkingModel.NewModelTag()
+		tmModelTagGroup := api.Group("/thinkingModel/modelTag")
+		tmModelTagGroup.GET("/model/:modelId", tmModelTagApi.GetByModel)
+		tmModelTagGroup.POST("/model", tmModelTagApi.AddToModel)
+		tmModelTagGroup.DELETE("/model", tmModelTagApi.RemoveFromModel)
+		tmModelTagGroup.GET("/hot", tmModelTagApi.Hot)
+		tmModelTagGroup.GET("/list", tmModelTagApi.List)
+		tmModelTagGroup.DELETE("", tmModelTagApi.Del)
+		tmModelTagGroup.POST("/increaseHeat", tmModelTagApi.IncreaseHeat)
 
 		// ==================== Thinking 模块 (MVP) ====================
 		// 思维模型管理
