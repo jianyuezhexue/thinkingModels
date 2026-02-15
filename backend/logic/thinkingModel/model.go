@@ -2,6 +2,7 @@ package thinkingModel
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"thinkingModels/domain/thinkingModel/model"
@@ -26,6 +27,10 @@ func (l *ModelLogic) Create(req *model.CreateModel) (*model.ModelInfo, error) {
 		return nil, err
 	}
 
+	// 获取当前用户信息
+	currUserId, _ := l.Ctx.Get("currUserId")
+	currUserName, _ := l.Ctx.Get("currUserName")
+
 	if concreteEntity, ok := entity.(*model.ModelEntity); ok {
 		concreteEntity.Status = 0
 		concreteEntity.Version = "1.0.0"
@@ -34,6 +39,15 @@ func (l *ModelLogic) Create(req *model.CreateModel) (*model.ModelInfo, error) {
 		}
 		if concreteEntity.EstimatedTime == 0 {
 			concreteEntity.EstimatedTime = 30
+		}
+		// 设置作者信息
+		if id, ok := currUserId.(string); ok && id != "" {
+			// currUserId 在 middleware 中是 string 类型
+		} else if id, ok := currUserId.(uint64); ok {
+			concreteEntity.AuthorId = id
+		}
+		if name, ok := currUserName.(string); ok {
+			concreteEntity.AuthorName = name
 		}
 	}
 
@@ -264,12 +278,19 @@ func convertToModelInfo(entity any) *model.ModelInfo {
 		Description:   e.Description,
 		Overview:      e.Overview,
 		Icon:          e.Icon,
+		CoverImage:    e.CoverImage,
 		CategoryId:    e.CategoryId,
+		Price:         e.Price,
+		IsFree:        e.Price == 0,
 		Difficulty:    e.Difficulty,
 		EstimatedTime: e.EstimatedTime,
 		Status:        e.Status,
 		Version:       e.Version,
 		IsOfficial:    e.IsOfficial,
+		Author: model.ModelAuthor{
+			Id:   fmt.Sprintf("%d", e.AuthorId),
+			Name: e.AuthorName,
+		},
 		Stats: model.ModelStats{
 			UsageCount:   int(e.UsageCount),
 			AdoptCount:   int(e.AdoptCount),

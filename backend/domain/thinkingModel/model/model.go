@@ -27,28 +27,32 @@ type ModelEntityInterface interface {
 // ModelEntity 思维模型实体
 type ModelEntity struct {
 	base.BaseModel[ModelEntity]
-	Name          string `json:"name" type:"db" comment:"模型名称"`
-	Description   string `json:"description" type:"db" comment:"简短描述"`
-	Overview      string `json:"overview" type:"db" comment:"概述"`
-	Icon          string `json:"icon" type:"db" comment:"图标"`
-	CategoryId    uint64 `json:"categoryId" type:"db" comment:"分类ID"`
-	Content       string `json:"content" type:"db" comment:"模型内容(JSON)"`
-	UsageGuide    string `json:"usageGuide" type:"db" comment:"使用指南"`
-	Examples      string `json:"examples" type:"db" comment:"案例(JSON)"`
-	AiPrompt      string `json:"aiPrompt" type:"db" comment:"AI提示词模板"`
-	Difficulty    int    `json:"difficulty" type:"db" comment:"难度: 1=简单, 2=中等, 3=困难"`
-	EstimatedTime int    `json:"estimatedTime" type:"db" comment:"预计用时(分钟)"`
-	Status        int    `json:"status" type:"db" comment:"状态: 0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回"`
-	Version       string `json:"version" type:"db" comment:"版本号"`
-	IsOfficial    bool   `json:"isOfficial" type:"db" comment:"是否官方"`
-	SourceModelId uint64 `json:"sourceModelId" type:"db" comment:"派生来源ID"`
-	UsageCount    int64  `json:"usageCount" type:"db" comment:"使用次数"`
-	AdoptCount    int64  `json:"adoptCount" type:"db" comment:"采纳次数"`
-	LikeCount     int64  `json:"likeCount" type:"db" comment:"点赞数"`
-	CommentCount  int64  `json:"commentCount" type:"db" comment:"评论数"`
-	ReviewNote    string `json:"reviewNote" type:"db" comment:"审核意见"`
-	ReviewerId    uint64 `json:"reviewerId" type:"db" comment:"审核人ID"`
-	ReviewerName  string `json:"reviewerName" type:"db" comment:"审核人姓名"`
+	Name          string  `json:"name" type:"db" comment:"模型名称"`
+	Description   string  `json:"description" type:"db" comment:"简短描述"`
+	Overview      string  `json:"overview" type:"db" comment:"概述"`
+	Icon          string  `json:"icon" type:"db" comment:"图标"`
+	CoverImage    string  `json:"coverImage" type:"db" comment:"封面图片"`
+	CategoryId    uint64  `json:"categoryId" type:"db" comment:"分类ID"`
+	Content       string  `json:"content" type:"db" comment:"模型内容(JSON)"`
+	UsageGuide    string  `json:"usageGuide" type:"db" comment:"使用指南"`
+	Examples      string  `json:"examples" type:"db" comment:"案例(JSON)"`
+	AiPrompt      string  `json:"aiPrompt" type:"db" comment:"AI提示词模板"`
+	Difficulty    int     `json:"difficulty" type:"db" comment:"难度: 1=简单, 2=中等, 3=困难"`
+	EstimatedTime int     `json:"estimatedTime" type:"db" comment:"预计用时(分钟)"`
+	Price         float64 `json:"price" type:"db" comment:"价格"`
+	Status        int     `json:"status" type:"db" comment:"状态: 0=草稿, 1=已发布, 2=已下架, 3=审核中, 4=已驳回"`
+	Version       string  `json:"version" type:"db" comment:"版本号"`
+	IsOfficial    bool    `json:"isOfficial" type:"db" comment:"是否官方"`
+	AuthorId      uint64  `json:"authorId" type:"db" comment:"作者ID"`
+	AuthorName    string  `json:"authorName" type:"db" comment:"作者名称"`
+	SourceModelId uint64  `json:"sourceModelId" type:"db" comment:"派生来源ID"`
+	UsageCount    int64   `json:"usageCount" type:"db" comment:"使用次数"`
+	AdoptCount    int64   `json:"adoptCount" type:"db" comment:"采纳次数"`
+	LikeCount     int64   `json:"likeCount" type:"db" comment:"点赞数"`
+	CommentCount  int64   `json:"commentCount" type:"db" comment:"评论数"`
+	ReviewNote    string  `json:"reviewNote" type:"db" comment:"审核意见"`
+	ReviewerId    uint64  `json:"reviewerId" type:"db" comment:"审核人ID"`
+	ReviewerName  string  `json:"reviewerName" type:"db" comment:"审核人姓名"`
 }
 
 // NewModelEntity 实例化思维模型实体
