@@ -150,3 +150,10 @@ type ListModelResponse struct {
 	Total    int64        `json:"total"`
 	List     []*ModelInfo `json:"list"`
 }
+
+// StatusCountsResponse 状态数量统计响应
+type StatusCountsResponse struct {
+	Pending  int64 `json:"pending"`  // 审核中 (status=3)
+	Approved int64 `json:"approved"` // 已发布 (status=1)
+	Rejected int64 `json:"rejected"` // 已驳回 (status=4)
+}

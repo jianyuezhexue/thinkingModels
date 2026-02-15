@@ -22,6 +22,7 @@ type ModelEntityInterface interface {
 	IncrementLikeCount()
 	IncrementCommentCount()
 	Fork() ModelEntityInterface
+	CountByStatus(status int) (int64, error)
 }
 
 // ModelEntity 思维模型实体

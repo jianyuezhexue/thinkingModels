@@ -211,3 +211,17 @@ func (a *Model) Review(ctx *gin.Context) {
 		a.Success(res, "已驳回")
 	}
 }
+
+// StatusCounts 获取各状态的模型数量统计
+func (a *Model) StatusCounts(ctx *gin.Context) {
+	a.Ctx = ctx
+
+	logic := thinkingModel.NewModelLogic(ctx)
+	res, err := logic.StatusCounts()
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	a.Success(res, "查询成功")
+}

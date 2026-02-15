@@ -31,6 +31,7 @@ import {
   getThinkingModelListApi,
   reviewThinkingModelApi,
   getThinkingModelDetailApi,
+  getModelStatusCountsApi,
 } from '#/api/thinking/model';
 import { getAllCategoriesApi } from '#/api/master/category';
 
@@ -155,28 +156,19 @@ async function loadStatusCounts() {
   const signal = statusCountsAbortController.signal;
 
   try {
-    // 并行请求各状态的模型数量
-    const [pendingRes, approvedRes, rejectedRes] = await Promise.all([
-      getThinkingModelListApi({ page: 1, pageSize: 1, status: 3 }, { signal }),
-      getThinkingModelListApi({ page: 1, pageSize: 1, status: 1 }, { signal }),
-      getThinkingModelListApi({ page: 1, pageSize: 1, status: 4 }, { signal }),
-    ]);
-    statusTotalCounts.pending = pendingRes.total;
-    statusTotalCounts.approved = approvedRes.total;
-    statusTotalCounts.rejected = rejectedRes.total;
+    // 调用统计接口一次性获取所有状态数量
+    const res = await getModelStatusCountsApi({ signal });
+    console.log('StatusCounts response:', res);
+    statusTotalCounts.pending = res.pending;
+    statusTotalCounts.approved = res.approved;
+    statusTotalCounts.rejected = res.rejected;
   } catch (error: any) {
     // 如果是取消错误，静默处理
     if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
       return;
     }
-    // 详细的错误信息
-    const errorInfo = {
-      message: error?.message || 'Unknown error',
-      status: error?.status || error?.response?.status,
-      data: error?.data || error?.response?.data,
-      code: error?.code,
-    };
-    console.error('加载状态统计失败:', errorInfo);
+    console.error('加载状态统计失败:', error);
+    ElMessage.error('加载状态统计失败');
   }
 }
 
@@ -368,8 +360,8 @@ function handleTabChange() {
 
 onMounted(async () => {
   await loadCategories();
-  loadStatusCounts();
   loadModels();
+  loadStatusCounts();
 });
 
 // 组件卸载时取消所有请求

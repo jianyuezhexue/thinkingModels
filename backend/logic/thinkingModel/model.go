@@ -321,3 +321,30 @@ func convertToModelDetail(entity any) *model.ModelDetail {
 		Content:   e.Content,
 	}
 }
+
+// StatusCounts 获取各状态的模型数量统计
+func (l *ModelLogic) StatusCounts() (*model.StatusCountsResponse, error) {
+	entity := model.NewModelEntity(l.Ctx)
+
+	// 查询各状态的数量
+	pending, err := entity.CountByStatus(model.StatusReviewing)
+	if err != nil {
+		return nil, err
+	}
+
+	approved, err := entity.CountByStatus(model.StatusPublished)
+	if err != nil {
+		return nil, err
+	}
+
+	rejected, err := entity.CountByStatus(model.StatusRejected)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.StatusCountsResponse{
+		Pending:  pending,
+		Approved: approved,
+		Rejected: rejected,
+	}, nil
+}

@@ -105,6 +105,13 @@ export namespace ThinkingModelApi {
     list: ModelInfo[];
   }
 
+  /** 状态数量统计响应 */
+  export interface StatusCountsResult {
+    pending: number;
+    approved: number;
+    rejected: number;
+  }
+
   /** 发布模型参数 */
   export interface PublishModelParams {
     id: number;
@@ -141,6 +148,24 @@ export async function getThinkingModelListApi(
     params,
     ...config,
   });
+}
+
+/**
+ * 获取各状态的模型数量统计
+ */
+export async function getModelStatusCountsApi(config?: { signal?: AbortSignal }) {
+  console.log('[getModelStatusCountsApi] Starting request...');
+  try {
+    const result = await requestClient.get<ThinkingModelApi.StatusCountsResult>(
+      '/thinkingModel/model/statusCounts',
+      config,
+    );
+    console.log('[getModelStatusCountsApi] Response:', result);
+    return result;
+  } catch (error) {
+    console.error('[getModelStatusCountsApi] Error:', error);
+    throw error;
+  }
 }
 
 /**

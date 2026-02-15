@@ -60,6 +60,7 @@ func AuthorizedRouters() {
 		tmModelGroup := api.Group("/thinkingModel/model")
 		tmModelGroup.GET("/list", tmModelApi.List)
 		tmModelGroup.GET("/my", tmModelApi.ListMy)
+		tmModelGroup.GET("/statusCounts", tmModelApi.StatusCounts) // 状态数量统计
 		tmModelGroup.GET("/code/:code", tmModelApi.GetByCode)
 		tmModelGroup.POST("", tmModelApi.Create)
 		tmModelGroup.PUT("", tmModelApi.Update)
@@ -80,6 +81,13 @@ func AuthorizedRouters() {
 		tmCategoryGroup.GET("/:id", tmCategoryApi.Get)
 		tmCategoryGroup.DELETE("", tmCategoryApi.Del)
 		tmCategoryGroup.POST("/increaseHeat", tmCategoryApi.IncreaseHeat)
+
+		// ==================== Market 模块 ====================
+		// 市场模型（复用 thinkingModel 的逻辑，只展示已发布的模型）
+		marketGroup := api.Group("/market/model")
+		marketGroup.GET("/list", tmModelApi.List)        // 复用 List，默认只返回已发布的
+		marketGroup.GET("/:id", tmModelApi.Get)          // 复用 Get
+		marketGroup.GET("/recommended", tmModelApi.List) // 推荐模型
 	}
 	Routers = append(Routers, authorizedRouters)
 }

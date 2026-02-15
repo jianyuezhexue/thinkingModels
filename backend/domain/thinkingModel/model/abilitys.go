@@ -103,6 +103,13 @@ func (m *ModelEntity) IncrementCommentCount() {
 	m.CommentCount++
 }
 
+// CountByStatus 按状态统计数量
+func (m *ModelEntity) CountByStatus(status int) (int64, error) {
+	var count int64
+	err := m.Db.Model(&ModelEntity{}).Where("status = ?", status).Count(&count).Error
+	return count, err
+}
+
 // ==================== 派生相关能力 ====================
 
 // Fork 派生模型

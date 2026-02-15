@@ -56,7 +56,7 @@ class RequestClient {
    * @param options - Axios请求配置，可选
    */
   constructor(options: RequestClientOptions = {}) {
-    // 合并默认配置和传入的配置
+    // 合并默认配置和传入的配置（用户配置优先覆盖默认配置）
     const defaultConfig: RequestClientOptions = {
       headers: {
         'Content-Type': 'application/json;charset=utf-8',
@@ -65,12 +65,12 @@ class RequestClient {
       // 默认超时时间
       timeout: 10_000,
     };
-    const { ...axiosConfig } = options;
-    const requestConfig = merge(axiosConfig, defaultConfig);
+    // 使用 Object.assign 确保用户配置优先
+    const requestConfig = Object.assign({}, defaultConfig, options);
     requestConfig.paramsSerializer = getParamsSerializer(
       requestConfig.paramsSerializer,
     );
-    this.instance = axios.create(requestConfig);
+    this.instance = axios.create(requestConfig as any);
 
     bindMethods(this);
 
