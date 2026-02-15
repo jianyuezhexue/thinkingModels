@@ -425,21 +425,6 @@ function handleEdit(row: User) {
   dialogVisible.value = true;
 }
 
-// 删除
-async function handleDelete(row: User) {
-  try {
-    await ElMessageBox.confirm(
-      `确定要删除用户 "${row.username}" 吗？`,
-      '确认删除',
-      { type: 'warning' }
-    );
-    ElMessage.success('删除成功');
-    loadData();
-  } catch {
-    // 取消删除
-  }
-}
-
 // 提交
 async function handleSubmit() {
   await formRef.value?.validate();

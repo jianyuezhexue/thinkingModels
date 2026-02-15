@@ -158,16 +158,30 @@ func (a User) Info(ctx *gin.Context) {
 	a.Ctx = ctx
 
 	// 从上下文获取当前用户ID（由JWT中间件设置）
-	userIDStr, exists := ctx.Get("currUserId")
+	userIDValue, exists := ctx.Get("currUserId")
 	if !exists {
 		a.Error(errors.New("未登录或token无效"))
 		return
 	}
 
-	// 将字符串ID转换为uint64
-	userID, err := strconv.ParseUint(userIDStr.(string), 10, 64)
-	if err != nil {
-		a.Error(errors.New("用户ID格式无效"))
+	// 处理不同类型的 userID（中间件可能传递 uint64 或 string）
+	var userID uint64
+	switch v := userIDValue.(type) {
+	case uint64:
+		userID = v
+	case string:
+		if v == "" {
+			a.Error(errors.New("未登录或token无效"))
+			return
+		}
+		var err error
+		userID, err = strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			a.Error(errors.New("用户ID格式无效"))
+			return
+		}
+	default:
+		a.Error(errors.New("未登录或token无效"))
 		return
 	}
 
