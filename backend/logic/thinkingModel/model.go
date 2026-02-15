@@ -3,6 +3,7 @@ package thinkingModel
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"thinkingModels/domain/thinkingModel/model"
@@ -40,11 +41,11 @@ func (l *ModelLogic) Create(req *model.CreateModel) (*model.ModelInfo, error) {
 		if concreteEntity.EstimatedTime == 0 {
 			concreteEntity.EstimatedTime = 30
 		}
-		// 设置作者信息
-		if id, ok := currUserId.(string); ok && id != "" {
-			// currUserId 在 middleware 中是 string 类型
-		} else if id, ok := currUserId.(uint64); ok {
-			concreteEntity.AuthorId = id
+		// 设置作者信息（currUserId 是字符串类型）
+		if idStr, ok := currUserId.(string); ok && idStr != "" {
+			if id, err := strconv.ParseUint(idStr, 10, 64); err == nil {
+				concreteEntity.AuthorId = id
+			}
 		}
 		if name, ok := currUserName.(string); ok {
 			concreteEntity.AuthorName = name

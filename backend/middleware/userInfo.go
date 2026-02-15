@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -16,9 +17,9 @@ func UserInfo() gin.HandlerFunc {
 		// 从请求头获取 Authorization token
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			// 没有 token，设置为空用户信息（允许访问公开接口）
-			c.Set("currUserId", "")
-			c.Set("currUserName", "")
+			// 没有 token，设置为默认系统用户（base库要求currUserId不能为空）
+			c.Set("currUserId", "0")
+			c.Set("currUserName", "系统")
 			c.Set("currRoleIds", "")
 			c.Next()
 			return
@@ -38,9 +39,9 @@ func UserInfo() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			// token 无效，设置为空用户信息
-			c.Set("currUserId", "")
-			c.Set("currUserName", "")
+			// token 无效，设置为默认系统用户
+			c.Set("currUserId", "0")
+			c.Set("currUserName", "系统")
 			c.Set("currRoleIds", "")
 			c.Next()
 			return
@@ -48,8 +49,8 @@ func UserInfo() gin.HandlerFunc {
 
 		// 从 claims 中提取用户信息
 		if claims, ok := token.Claims.(*UserClaims); ok {
-			// 将用户ID转换为字符串
-			c.Set("currUserId", claims.UserID)
+			// 将用户ID转换为字符串（base库期望字符串类型）
+			c.Set("currUserId", fmt.Sprintf("%.0f", claims.UserID))
 			c.Set("currUserName", claims.Username)
 			c.Set("currRoleIds", claims.RoleIds)
 		}
@@ -60,9 +61,14 @@ func UserInfo() gin.HandlerFunc {
 
 // UserClaims JWT Claims 定义（与 domain/iam/user/model.go 中的定义一致）
 type UserClaims struct {
-	UserID       uint64 `json:"sub"`
-	Username     string `json:"username"`
-	EnterpriseID uint64 `json:"enterprise_id"`
-	RoleIds      string `json:"role_ids"`
+	UserID       float64 `json:"sub"` // JWT 解析数字为 float64
+	Username     string  `json:"username"`
+	EnterpriseID float64 `json:"enterprise_id"`
+	RoleIds      string  `json:"role_ids"`
 	jwt.RegisteredClaims
+}
+
+// GetUserID 将 UserID 转换为 uint64
+func (c *UserClaims) GetUserID() uint64 {
+	return uint64(c.UserID)
 }
