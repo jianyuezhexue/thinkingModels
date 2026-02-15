@@ -3,15 +3,16 @@ package category
 import (
 	"errors"
 
+	"thinkingModels/component/db"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jianyuezhexue/base"
-	"thinkingModels/component/db"
 )
 
 // CategoryEntity 分类实体业务模型
 type CategoryEntity struct {
 	base.BaseModel[CategoryEntity]
-	Name        string `json:"name" type:"db" comment:"分类名称"`      // 分类名称
+	Name        string `json:"name" type:"db" comment:"分类名称"`        // 分类名称
 	Icon        string `json:"icon" type:"db" comment:"分类图标"`        // 分类图标URL
 	Description string `json:"description" type:"db" comment:"分类描述"` // 分类描述
 	Heat        int    `json:"heat" type:"db" comment:"热度值"`         // 热度值，用于排序
@@ -26,7 +27,7 @@ func NewCategoryEntity(ctx *gin.Context) *CategoryEntity {
 
 // 数据表名
 func (m *CategoryEntity) TableName() string {
-	return "thinking_model_categories"
+	return "category"
 }
 
 // Validate 数据校验

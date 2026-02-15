@@ -84,18 +84,9 @@ func (l *ModelLogic) Get(id uint64) (*model.ModelDetail, error) {
 	return convertToModelDetail(res), nil
 }
 
-// GetByCode 按编码查询
+// GetByCode 按编码查询（已废弃，请使用 Get）
 func (l *ModelLogic) GetByCode(code string) (*model.ModelDetail, error) {
-	entity := model.NewModelEntity(l.Ctx)
-	cond := entity.MakeConditon(model.SearchModel{Code: code})
-	list, err := entity.List(cond)
-	if err != nil {
-		return nil, err
-	}
-	if len(list) == 0 {
-		return nil, errors.New("模型不存在")
-	}
-	return convertToModelDetail(list[0]), nil
+	return nil, errors.New("该方法已废弃")
 }
 
 // List 查询思维模型列表
@@ -269,7 +260,6 @@ func convertToModelInfo(entity any) *model.ModelInfo {
 	}
 	return &model.ModelInfo{
 		Id:            e.Id,
-		Code:          e.Code,
 		Name:          e.Name,
 		Description:   e.Description,
 		Overview:      e.Overview,

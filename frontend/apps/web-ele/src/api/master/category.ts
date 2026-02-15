@@ -30,7 +30,7 @@ export namespace MasterCategoryApi {
  * 获取所有分类（按热度降序）
  */
 export async function getAllCategoriesApi() {
-  const res = await requestClient.get<{ list: MasterCategoryApi.Category[] }>('/master/category/all');
+  const res = await requestClient.get<{ list: MasterCategoryApi.Category[] }>('/thinkingModel/category/all');
   return res.list;
 }
 
@@ -43,42 +43,42 @@ export async function getCategoryListApi(params: { page?: number; pageSize?: num
     total: number;
     page: number;
     pageSize: number;
-  }>('/master/category/list', { params });
+  }>('/thinkingModel/category/list', { params });
 }
 
 /**
  * 获取分类详情
  */
 export async function getCategoryDetailApi(id: string) {
-  return requestClient.get<MasterCategoryApi.Category>(`/master/category/${id}`);
+  return requestClient.get<MasterCategoryApi.Category>(`/thinkingModel/category/${id}`);
 }
 
 /**
  * 创建分类
  */
 export async function createCategoryApi(data: MasterCategoryApi.CreateCategoryParams) {
-  return requestClient.post<MasterCategoryApi.Category>('/master/category', data);
+  return requestClient.post<MasterCategoryApi.Category>('/thinkingModel/category', data);
 }
 
 /**
  * 更新分类
  */
 export async function updateCategoryApi(data: MasterCategoryApi.UpdateCategoryParams) {
-  return requestClient.put<MasterCategoryApi.Category>('/master/category', data);
+  return requestClient.put<MasterCategoryApi.Category>('/thinkingModel/category', data);
 }
 
 /**
  * 删除分类
  */
 export async function deleteCategoryApi(id: string) {
-  return requestClient.delete('/master/category', { params: { ids: [id] } });
+  return requestClient.delete('/thinkingModel/category', { params: { ids: [id] } });
 }
 
 /**
  * 增加分类热度
  */
 export async function increaseHeatApi(id: string, delta: number) {
-  return requestClient.post<MasterCategoryApi.Category>('/master/category/increaseHeat', {
+  return requestClient.post<MasterCategoryApi.Category>('/thinkingModel/category/increaseHeat', {
     id,
     delta,
   });

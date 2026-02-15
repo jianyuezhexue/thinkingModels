@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"time"
 
 	"thinkingModels/component/db"
 
@@ -28,7 +27,6 @@ type ModelEntityInterface interface {
 // ModelEntity 思维模型实体
 type ModelEntity struct {
 	base.BaseModel[ModelEntity]
-	Code          string `json:"code" type:"db" comment:"模型编码"`
 	Name          string `json:"name" type:"db" comment:"模型名称"`
 	Description   string `json:"description" type:"db" comment:"简短描述"`
 	Overview      string `json:"overview" type:"db" comment:"概述"`
@@ -103,96 +101,4 @@ func (m *ModelEntity) Complete() error {
 	return nil
 }
 
-// Publish 发布模型
-func (m *ModelEntity) Publish() error {
-	if m.Status == StatusPublished {
-		return errors.New("模型已发布")
-	}
-	m.Status = StatusPublished
-	return nil
-}
-
-// Unpublish 下架模型
-func (m *ModelEntity) Unpublish() error {
-	if m.Status != StatusPublished {
-		return errors.New("模型未发布，无法下架")
-	}
-	m.Status = StatusUnpublish
-	return nil
-}
-
-// SubmitForReview 提交审核
-func (m *ModelEntity) SubmitForReview() error {
-	if m.Status == StatusReviewing {
-		return errors.New("模型正在审核中")
-	}
-	if m.Status == StatusPublished {
-		return errors.New("模型已发布，无需审核")
-	}
-	m.Status = StatusReviewing
-	return nil
-}
-
-// Approve 审核通过
-func (m *ModelEntity) Approve(reviewerId uint64, reviewerName, note string) {
-	m.Status = StatusPublished
-	m.ReviewerId = reviewerId
-	m.ReviewerName = reviewerName
-	m.ReviewNote = note
-}
-
-// Reject 审核驳回
-func (m *ModelEntity) Reject(reviewerId uint64, reviewerName, note string) error {
-	if note == "" {
-		return errors.New("驳回时必须填写审核意见")
-	}
-	m.Status = StatusRejected
-	m.ReviewerId = reviewerId
-	m.ReviewerName = reviewerName
-	m.ReviewNote = note
-	return nil
-}
-
-// IncrementUsageCount 增加使用次数
-func (m *ModelEntity) IncrementUsageCount() {
-	m.UsageCount++
-}
-
-// IncrementAdoptCount 增加采纳次数
-func (m *ModelEntity) IncrementAdoptCount() {
-	m.AdoptCount++
-}
-
-// IncrementLikeCount 增加点赞数
-func (m *ModelEntity) IncrementLikeCount() {
-	m.LikeCount++
-}
-
-// IncrementCommentCount 增加评论数
-func (m *ModelEntity) IncrementCommentCount() {
-	m.CommentCount++
-}
-
-// Fork 派生模型
-func (m *ModelEntity) Fork() ModelEntityInterface {
-	newEntity := &ModelEntity{
-		Code:          m.Code + "_fork_" + time.Now().Format("20060102150405"),
-		Name:          m.Name + " (派生)",
-		Description:   m.Description,
-		Overview:      m.Overview,
-		Icon:          m.Icon,
-		CategoryId:    m.CategoryId,
-		Content:       m.Content,
-		UsageGuide:    m.UsageGuide,
-		Examples:      m.Examples,
-		AiPrompt:      m.AiPrompt,
-		Difficulty:    m.Difficulty,
-		EstimatedTime: m.EstimatedTime,
-		Status:        0, // 草稿
-		Version:       "1.0.0",
-		IsOfficial:    false,
-		SourceModelId: m.Id,
-	}
-	newEntity.BaseModel = m.BaseModel
-	return newEntity
-}
+// ==================== 以下自定义业务能力代码已移至 abilitys.go ====================

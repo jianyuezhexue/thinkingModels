@@ -32,7 +32,6 @@ import {
 interface ModelInfo {
   id: number;
   name: string;
-  code: string;
   description: string;
   coverImage: string;
   icon: string;
@@ -144,7 +143,6 @@ function generateMockData(): ModelInfo[] {
     {
       id: 1,
       name: 'SWOT 分析模型',
-      code: 'swot_analysis',
       description: '系统分析优势、劣势、机会与威胁的经典战略框架，适用于企业战略规划和个人决策分析。',
       coverImage: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop',
       icon: '📊',
@@ -168,7 +166,6 @@ function generateMockData(): ModelInfo[] {
     {
       id: 2,
       name: '第一性原理思维',
-      code: 'first_principles',
       description: '像马斯克一样回归本质，打破常规的创新思考方式，深入问题本质找到创新解决方案。',
       coverImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=400&fit=crop',
       icon: '💡',
@@ -192,7 +189,6 @@ function generateMockData(): ModelInfo[] {
     {
       id: 3,
       name: 'PDCA 循环',
-      code: 'pdca_cycle',
       description: '计划-执行-检查-行动的持续改进方法论，适用于质量管理、流程优化等场景。',
       coverImage: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
       icon: '🔄',
@@ -219,7 +215,6 @@ function generateMockData(): ModelInfo[] {
     {
       id: 4,
       name: '六顶思考帽',
-      code: 'six_thinking_hats',
       description: '德博诺的经典创意工具，全方位激发团队创造力，从不同角度思考问题。',
       coverImage: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=400&fit=crop',
       icon: '🎩',
@@ -243,7 +238,6 @@ function generateMockData(): ModelInfo[] {
     {
       id: 5,
       name: '5W1H 分析模型',
-      code: '5w1h_analysis',
       description: '六个基本问题全面剖析，确保思考无遗漏，适用于问题分析、需求梳理等场景。',
       coverImage: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=400&fit=crop',
       icon: '❓',

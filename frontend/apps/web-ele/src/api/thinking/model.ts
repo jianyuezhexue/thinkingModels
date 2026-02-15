@@ -20,7 +20,6 @@ export namespace ThinkingModelApi {
   export interface ModelInfo {
     id: number;
     name: string;
-    code: string;
     description: string;
     coverImage: string;
     icon: string;
@@ -50,7 +49,6 @@ export namespace ThinkingModelApi {
   /** 创建模型参数 */
   export interface CreateModelParams {
     name: string;
-    code: string;
     description?: string;
     coverImage?: string;
     icon?: string;
@@ -129,68 +127,61 @@ export namespace ThinkingModelApi {
  * 获取思维模型列表
  */
 export async function getThinkingModelListApi(params: ThinkingModelApi.ModelListParams = {}) {
-  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinking/model/list', { params });
+  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinkingModel/model/list', { params });
 }
 
 /**
  * 获取我的思维模型列表
  */
 export async function getMyThinkingModelListApi(params: ThinkingModelApi.ModelListParams = {}) {
-  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinking/model/my', { params });
+  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinkingModel/model/my', { params });
 }
 
 /**
  * 获取思维模型详情
  */
 export async function getThinkingModelDetailApi(id: number) {
-  return requestClient.get<ThinkingModelApi.ModelDetail>(`/thinking/model/${id}`);
-}
-
-/**
- * 根据编码获取思维模型
- */
-export async function getThinkingModelByCodeApi(code: string) {
-  return requestClient.get<ThinkingModelApi.ModelDetail>(`/thinking/model/code/${code}`);
+  return requestClient.get<ThinkingModelApi.ModelDetail>(`/thinkingModel/model/${id}`);
 }
 
 /**
  * 创建思维模型
  */
 export async function createThinkingModelApi(data: ThinkingModelApi.CreateModelParams) {
-  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinking/model', data);
+  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinkingModel/model', data);
 }
 
 /**
  * 更新思维模型
  */
 export async function updateThinkingModelApi(data: ThinkingModelApi.UpdateModelParams) {
-  return requestClient.put<ThinkingModelApi.ModelInfo>('/thinking/model', data);
+  return requestClient.put<ThinkingModelApi.ModelInfo>('/thinkingModel/model', data);
 }
 
 /**
  * 删除思维模型
  */
 export async function deleteThinkingModelApi(data: ThinkingModelApi.DelModelParams) {
-  return requestClient.delete('/thinking/model', { data });
+  return requestClient.delete('/thinkingModel/model', { data });
 }
 
 /**
  * 发布思维模型
  */
 export async function publishThinkingModelApi(data: ThinkingModelApi.PublishModelParams) {
-  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinking/model/publish', data);
+  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinkingModel/model/publish', data);
 }
 
 /**
  * 下架思维模型
  */
 export async function unpublishThinkingModelApi(id: number) {
-  return requestClient.post<ThinkingModelApi.ModelInfo>(`/thinking/model/unpublish/${id}`);
+  return requestClient.post<ThinkingModelApi.ModelInfo>(`/thinkingModel/model/unpublish/${id}`);
 }
 
 /**
  * 引用创建思维模型
  */
 export async function forkThinkingModelApi(data: ThinkingModelApi.ForkModelParams) {
-  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinking/model/fork', data);
+  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinkingModel/model/fork', data);
 }

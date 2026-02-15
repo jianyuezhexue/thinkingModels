@@ -938,7 +938,6 @@ async function handleSubmit() {
     // 构建提交数据（字段名使用驼峰格式与后端 Go struct 对应）
     const submitData = {
       name: form.title,
-      code: form.title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
       description: form.description,
       categoryId: form.category[0] ? parseInt(form.category[0]) : 1,
       difficulty: 2, // 默认难度：1=简单 2=中等 3=困难
@@ -956,15 +955,15 @@ async function handleSubmit() {
 
     if (isEdit.value && editId.value) {
       // 编辑模式 - 更新模型并提交审核
-      await requestClient.put('/thinking/model', { ...submitData, id: editId.value });
-      await requestClient.post('/thinking/model/publish', { id: editId.value });
+      await requestClient.put('/thinkingModel/model', { ...submitData, id: editId.value });
+      await requestClient.post('/thinkingModel/model/publish', { id: editId.value });
       ElMessage.success('模型已更新并提交审核');
     } else {
       // 创建模式 - 创建模型
-      const res = await requestClient.post('/thinking/model', submitData);
+      const res = await requestClient.post('/thinkingModel/model', submitData);
       // 创建成功后提交审核
       if (res && res.id) {
-        await requestClient.post('/thinking/model/publish', { id: res.id });
+        await requestClient.post('/thinkingModel/model/publish', { id: res.id });
       }
       ElMessage.success('模型已创建并提交审核');
     }
@@ -989,7 +988,6 @@ async function handleSaveDraft() {
     // 构建草稿数据（字段名使用驼峰格式与后端 Go struct 对应）
     const draftData = {
       name: form.title || '未命名草稿',
-      code: (form.title || 'draft').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 50),
       description: form.description,
       categoryId: form.category[0] ? parseInt(form.category[0]) : 1,
       difficulty: 2,
@@ -1007,10 +1005,10 @@ async function handleSaveDraft() {
 
     if (isEdit.value && editId.value) {
       // 编辑模式 - 更新草稿
-      await requestClient.put('/thinking/model', { ...draftData, id: editId.value });
+      await requestClient.put('/thinkingModel/model', { ...draftData, id: editId.value });
     } else {
       // 创建模式 - 创建草稿
-      await requestClient.post('/thinking/model', draftData);
+      await requestClient.post('/thinkingModel/model', draftData);
     }
 
     ElMessage.success('草稿已保存');
