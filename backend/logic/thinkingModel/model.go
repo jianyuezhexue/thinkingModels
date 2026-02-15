@@ -222,8 +222,10 @@ func (l *ModelLogic) Review(req *model.ReviewModel) (*model.ModelInfo, error) {
 	currUserName, _ := l.Ctx.Get("currUserName")
 
 	var reviewerId uint64
-	if id, ok := currUserId.(uint64); ok {
-		reviewerId = id
+	if idStr, ok := currUserId.(string); ok && idStr != "" {
+		if id, err := strconv.ParseUint(idStr, 10, 64); err == nil {
+			reviewerId = id
+		}
 	}
 	reviewerName := ""
 	if name, ok := currUserName.(string); ok {

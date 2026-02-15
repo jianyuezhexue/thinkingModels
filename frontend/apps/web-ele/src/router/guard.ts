@@ -94,7 +94,18 @@ function setupAccessGuard(router: Router) {
     // 当前登录用户拥有的角色标识列表
     let userInfo = userStore.userInfo;
     if (!userInfo) {
-      userInfo = await authStore.fetchUserInfo();
+      try {
+        userInfo = await authStore.fetchUserInfo();
+      } catch (error) {
+        // 获取用户信息失败，清除token并跳转登录页
+        console.error('获取用户信息失败:', error);
+        accessStore.setAccessToken(null);
+        return {
+          path: LOGIN_PATH,
+          query: { redirect: encodeURIComponent(to.fullPath) },
+          replace: true,
+        };
+      }
     }
     if (!userInfo) {
       return LOGIN_PATH;

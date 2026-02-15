@@ -68,6 +68,7 @@ func AuthorizedRouters() {
 		tmModelGroup.POST("/publish", tmModelApi.Publish)
 		tmModelGroup.POST("/unpublish/:id", tmModelApi.Unpublish)
 		tmModelGroup.POST("/fork", tmModelApi.Fork)
+		tmModelGroup.POST("/review", tmModelApi.Review)
 
 		// 思维模型分类管理
 		tmCategoryApi := thinkingModel.NewCategory()

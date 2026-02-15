@@ -121,13 +121,26 @@ export namespace ThinkingModelApi {
   export interface DelModelParams {
     ids: number[];
   }
+
+  /** 审核模型参数 */
+  export interface ReviewModelParams {
+    id: number;
+    approved: boolean;
+    note?: string;
+  }
 }
 
 /**
  * 获取思维模型列表
  */
-export async function getThinkingModelListApi(params: ThinkingModelApi.ModelListParams = {}) {
-  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinkingModel/model/list', { params });
+export async function getThinkingModelListApi(
+  params: ThinkingModelApi.ModelListParams = {},
+  config?: { signal?: AbortSignal },
+) {
+  return requestClient.get<ThinkingModelApi.ModelListResult>('/thinkingModel/model/list', {
+    params,
+    ...config,
+  });
 }
 
 /**
@@ -184,4 +197,11 @@ export async function unpublishThinkingModelApi(id: number) {
  */
 export async function forkThinkingModelApi(data: ThinkingModelApi.ForkModelParams) {
   return requestClient.post<ThinkingModelApi.ModelInfo>('/thinkingModel/model/fork', data);
+}
+
+/**
+ * 审核思维模型
+ */
+export async function reviewThinkingModelApi(data: ThinkingModelApi.ReviewModelParams) {
+  return requestClient.post<ThinkingModelApi.ModelInfo>('/thinkingModel/model/review', data);
 }

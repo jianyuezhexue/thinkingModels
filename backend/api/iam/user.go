@@ -170,7 +170,7 @@ func (a User) Info(ctx *gin.Context) {
 	case uint64:
 		userID = v
 	case string:
-		if v == "" {
+		if v == "" || v == "0" {
 			a.Error(errors.New("未登录或token无效"))
 			return
 		}
@@ -181,6 +181,12 @@ func (a User) Info(ctx *gin.Context) {
 			return
 		}
 	default:
+		a.Error(errors.New("未登录或token无效"))
+		return
+	}
+
+	// 检查 userID 是否有效
+	if userID == 0 {
 		a.Error(errors.New("未登录或token无效"))
 		return
 	}

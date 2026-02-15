@@ -53,6 +53,7 @@ func (a *Model) Update(ctx *gin.Context) {
 
 // Get 获取思维模型详情
 func (a *Model) Get(ctx *gin.Context) {
+	a.Ctx = ctx
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -71,6 +72,7 @@ func (a *Model) Get(ctx *gin.Context) {
 
 // GetByCode 根据编码获取思维模型
 func (a *Model) GetByCode(ctx *gin.Context) {
+	a.Ctx = ctx
 	code := ctx.Param("code")
 
 	logic := thinkingModel.NewModelLogic(ctx)
@@ -84,6 +86,7 @@ func (a *Model) GetByCode(ctx *gin.Context) {
 
 // List 获取思维模型列表
 func (a *Model) List(ctx *gin.Context) {
+	a.Ctx = ctx
 	req := &model.SearchModel{}
 	if err := ctx.ShouldBindQuery(req); err != nil {
 		a.Error(err)
@@ -101,6 +104,7 @@ func (a *Model) List(ctx *gin.Context) {
 
 // ListMy 获取我的思维模型
 func (a *Model) ListMy(ctx *gin.Context) {
+	a.Ctx = ctx
 	req := &model.SearchModel{}
 	if err := ctx.ShouldBindQuery(req); err != nil {
 		a.Error(err)
@@ -152,6 +156,7 @@ func (a *Model) Publish(ctx *gin.Context) {
 
 // Unpublish 下架思维模型
 func (a *Model) Unpublish(ctx *gin.Context) {
+	a.Ctx = ctx
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -183,4 +188,26 @@ func (a *Model) Fork(ctx *gin.Context) {
 		return
 	}
 	a.Success(res, "创建成功")
+}
+
+// Review 审核思维模型
+func (a *Model) Review(ctx *gin.Context) {
+	req := &model.ReviewModel{}
+	if err := a.Bind(ctx, req); err != nil {
+		a.Error(err)
+		return
+	}
+
+	logic := thinkingModel.NewModelLogic(ctx)
+	res, err := logic.Review(req)
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	if req.Approved {
+		a.Success(res, "审核通过")
+	} else {
+		a.Success(res, "已驳回")
+	}
 }
