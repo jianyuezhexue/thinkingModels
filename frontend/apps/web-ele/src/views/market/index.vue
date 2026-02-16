@@ -1,264 +1,3 @@
-<script lang="ts" setup>
-import { onMounted, ref, watch, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-
-import { Page } from '@vben/common-ui';
-
-import {
-  ElButton,
-  ElCard,
-  ElInput,
-  ElSelect,
-  ElOption,
-  ElMessage,
-  ElSkeleton,
-  ElSkeletonItem,
-  ElEmpty,
-  ElTag,
-  ElAvatar,
-  ElTooltip,
-  ElPagination,
-} from 'element-plus';
-
-import {
-  getThinkingModelListApi,
-  forkThinkingModelApi,
-} from '#/api/thinking/model';
-import { getAllCategoriesApi } from '#/api/master/category';
-
-// 类型定义
-interface MarketModel {
-  id: number;
-  name: string;
-  description: string;
-  coverImage: string;
-  icon: string;
-  categoryId: number;
-  categoryName?: string;
-  tags: string[] | null;
-  price: number;
-  isFree: boolean;
-  stats: {
-    usageCount: number;
-    adoptCount: number;
-    likeCount: number;
-    commentCount: number;
-  };
-  author: {
-    id: string;
-    name: string;
-    avatar: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-// 请求取消控制器
-let abortController: AbortController | null = null;
-
-// 加载状态
-const loading = ref(false);
-
-// 模型列表数据
-const models = ref<MarketModel[]>([]);
-const total = ref(0);
-
-// 筛选状态
-const searchQuery = ref('');
-const selectedCategory = ref<number | 'all'>('all');
-const selectedSort = ref<'popular' | 'newest' | 'mostAdopted' | 'mostLiked'>('popular');
-const priceFilter = ref<'all' | 'free' | 'paid'>('all');
-
-// 分页
-const currentPage = ref(1);
-const pageSize = ref(12);
-
-// 分类列表（从后端获取）
-const categoryOptions = ref<{ value: number; label: string; icon: string }[]>([]);
-const categories = ref<{ id: number | 'all'; name: string; icon: string }[]>([
-  { id: 'all', name: '全部模型', icon: '🎯' },
-]);
-
-// 排序选项
-const sortOptions = [
-  { id: 'popular', name: '最受欢迎' },
-  { id: 'newest', name: '最新发布' },
-  { id: 'mostAdopted', name: '最多采纳' },
-  { id: 'mostLiked', name: '最多点赞' },
-];
-
-// 热门标签
-const hotTags = ref([
-  'SWOT分析', '金字塔原理', '六顶思考帽', '设计思维', 'PDCA循环',
-  'OKR', '5Why分析', '波特五力', 'MECE原则', '费米估算'
-]);
-
-// 推荐模型
-const recommendedModels = ref<MarketModel[]>([]);
-
-const router = useRouter();
-
-// 加载分类列表
-async function loadCategories() {
-  try {
-    const list = await getAllCategoriesApi();
-    categoryOptions.value = list.map((item) => ({
-      value: Number(item.id),
-      label: item.name,
-      icon: '📁',
-    }));
-    categories.value = [
-      { id: 'all', name: '全部模型', icon: '🎯' },
-      ...list.map((item) => ({
-        id: Number(item.id),
-        name: item.name,
-        icon: '📁',
-      })),
-    ];
-  } catch (error) {
-    console.error('加载分类列表失败:', error);
-  }
-}
-
-// 获取模型列表
-async function fetchModelList() {
-  // 取消之前的请求
-  abortController?.abort();
-  abortController = new AbortController();
-  const signal = abortController.signal;
-
-  loading.value = true;
-  try {
-    const params: Record<string, any> = {
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      status: 1, // 只获取已发布的模型
-    };
-
-    // 搜索关键字
-    if (searchQuery.value) {
-      params.name = searchQuery.value;
-    }
-
-    // 分类筛选
-    if (selectedCategory.value !== 'all') {
-      params.categoryId = selectedCategory.value;
-    }
-
-    // 价格筛选
-    if (priceFilter.value === 'free') {
-      params.isFree = true;
-    } else if (priceFilter.value === 'paid') {
-      params.isFree = false;
-    }
-
-    // 排序
-    if (selectedSort.value === 'popular') {
-      params.sortBy = 'usageCount';
-    } else if (selectedSort.value === 'newest') {
-      params.sortBy = 'createdAt';
-    } else if (selectedSort.value === 'mostAdopted') {
-      params.sortBy = 'adoptCount';
-    } else if (selectedSort.value === 'mostLiked') {
-      params.sortBy = 'likeCount';
-    }
-
-    const res = await getThinkingModelListApi(params, { signal });
-    models.value = res.list.map((item) => ({
-      ...item,
-      categoryName: categoryOptions.value.find((c) => c.value === item.categoryId)?.label || '',
-    }));
-    total.value = res.total;
-
-    // 如果还没有推荐模型，取前3个作为推荐
-    if (recommendedModels.value.length === 0 && res.list.length > 0) {
-      recommendedModels.value = models.value.slice(0, 3);
-    }
-  } catch (error: any) {
-    // 如果是取消错误，静默处理
-    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
-      return;
-    }
-    console.error('获取模型列表失败:', error);
-    ElMessage.error('获取模型列表失败');
-  } finally {
-    loading.value = false;
-  }
-}
-
-// 监听筛选条件变化，重置页码并重新加载
-watch([searchQuery, selectedCategory, selectedSort, priceFilter], () => {
-  currentPage.value = 1;
-  fetchModelList();
-});
-
-// 监听页码变化
-watch([currentPage, pageSize], () => {
-  fetchModelList();
-});
-
-// 分页处理
-function handleSizeChange(size: number) {
-  pageSize.value = size;
-  fetchModelList();
-}
-
-function handleCurrentChange(page: number) {
-  currentPage.value = page;
-  fetchModelList();
-}
-
-// 页面加载时获取数据
-onMounted(async () => {
-  await loadCategories();
-  await fetchModelList();
-});
-
-// 组件卸载时取消请求
-onUnmounted(() => {
-  abortController?.abort();
-});
-
-// 跳转到详情页
-function goToDetail(model: MarketModel) {
-  router.push(`/market/${model.id}`);
-}
-
-// 格式化数字
-function formatNumber(num: number): string {
-  if (num >= 10000) return (num / 10000).toFixed(1) + '万';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-}
-
-// 引用模型
-async function handleFork(model: MarketModel, event: Event) {
-  event.stopPropagation();
-  try {
-    await forkThinkingModelApi({
-      sourceModelId: model.id,
-      name: model.name + ' (副本)',
-    });
-    ElMessage.success('已创建副本到您的模型库');
-  } catch (error) {
-    console.error('引用失败:', error);
-    ElMessage.error('引用失败');
-  }
-}
-
-// 获取分类图标
-function getCategoryIcon(categoryId: number): string {
-  const cat = categories.value.find((c) => c.id === categoryId);
-  return cat?.icon || '📁';
-}
-
-// 获取分类名称
-function getCategoryName(categoryId: number): string {
-  const cat = categories.value.find((c) => c.id === categoryId);
-  return cat?.name || '';
-}
-</script>
-
 <template>
   <Page
     description="发现、学习、应用各种强大的思维模型，提升你的思考深度和决策质量"
@@ -631,6 +370,267 @@ function getCategoryName(categoryId: number): string {
     </div>
   </Page>
 </template>
+
+<script lang="ts" setup>
+import { onMounted, ref, watch, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { Page } from '@vben/common-ui';
+
+import {
+  ElButton,
+  ElCard,
+  ElInput,
+  ElSelect,
+  ElOption,
+  ElMessage,
+  ElSkeleton,
+  ElSkeletonItem,
+  ElEmpty,
+  ElTag,
+  ElAvatar,
+  ElTooltip,
+  ElPagination,
+} from 'element-plus';
+
+import {
+  getThinkingModelListApi,
+  forkThinkingModelApi,
+} from '#/api/thinking/model';
+import { getAllCategoriesApi } from '#/api/master/category';
+
+// 类型定义
+interface MarketModel {
+  id: number;
+  name: string;
+  description: string;
+  coverImage: string;
+  icon: string;
+  categoryId: number;
+  categoryName?: string;
+  tags: string[] | null;
+  price: number;
+  isFree: boolean;
+  stats: {
+    usageCount: number;
+    adoptCount: number;
+    likeCount: number;
+    commentCount: number;
+  };
+  author: {
+    id: string;
+    name: string;
+    avatar: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 请求取消控制器
+let abortController: AbortController | null = null;
+
+// 加载状态
+const loading = ref(false);
+
+// 模型列表数据
+const models = ref<MarketModel[]>([]);
+const total = ref(0);
+
+// 筛选状态
+const searchQuery = ref('');
+const selectedCategory = ref<number | 'all'>('all');
+const selectedSort = ref<'popular' | 'newest' | 'mostAdopted' | 'mostLiked'>('popular');
+const priceFilter = ref<'all' | 'free' | 'paid'>('all');
+
+// 分页
+const currentPage = ref(1);
+const pageSize = ref(12);
+
+// 分类列表（从后端获取）
+const categoryOptions = ref<{ value: number; label: string; icon: string }[]>([]);
+const categories = ref<{ id: number | 'all'; name: string; icon: string }[]>([
+  { id: 'all', name: '全部模型', icon: '🎯' },
+]);
+
+// 排序选项
+const sortOptions = [
+  { id: 'popular', name: '最受欢迎' },
+  { id: 'newest', name: '最新发布' },
+  { id: 'mostAdopted', name: '最多采纳' },
+  { id: 'mostLiked', name: '最多点赞' },
+];
+
+// 热门标签
+const hotTags = ref([
+  'SWOT分析', '金字塔原理', '六顶思考帽', '设计思维', 'PDCA循环',
+  'OKR', '5Why分析', '波特五力', 'MECE原则', '费米估算'
+]);
+
+// 推荐模型
+const recommendedModels = ref<MarketModel[]>([]);
+
+const router = useRouter();
+
+// 加载分类列表
+async function loadCategories() {
+  try {
+    const list = await getAllCategoriesApi();
+    categoryOptions.value = list.map((item) => ({
+      value: Number(item.id),
+      label: item.name,
+      icon: '📁',
+    }));
+    categories.value = [
+      { id: 'all', name: '全部模型', icon: '🎯' },
+      ...list.map((item) => ({
+        id: Number(item.id),
+        name: item.name,
+        icon: '📁',
+      })),
+    ];
+  } catch (error) {
+    console.error('加载分类列表失败:', error);
+  }
+}
+
+// 获取模型列表
+async function fetchModelList() {
+  // 取消之前的请求
+  abortController?.abort();
+  abortController = new AbortController();
+  const signal = abortController.signal;
+
+  loading.value = true;
+  try {
+    const params: Record<string, any> = {
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      status: 1, // 只获取已发布的模型
+    };
+
+    // 搜索关键字
+    if (searchQuery.value) {
+      params.name = searchQuery.value;
+    }
+
+    // 分类筛选
+    if (selectedCategory.value !== 'all') {
+      params.categoryId = selectedCategory.value;
+    }
+
+    // 价格筛选
+    if (priceFilter.value === 'free') {
+      params.isFree = true;
+    } else if (priceFilter.value === 'paid') {
+      params.isFree = false;
+    }
+
+    // 排序
+    if (selectedSort.value === 'popular') {
+      params.sortBy = 'usageCount';
+    } else if (selectedSort.value === 'newest') {
+      params.sortBy = 'createdAt';
+    } else if (selectedSort.value === 'mostAdopted') {
+      params.sortBy = 'adoptCount';
+    } else if (selectedSort.value === 'mostLiked') {
+      params.sortBy = 'likeCount';
+    }
+
+    const res = await getThinkingModelListApi(params, { signal });
+    models.value = res.list.map((item) => ({
+      ...item,
+      categoryName: categoryOptions.value.find((c) => c.value === item.categoryId)?.label || '',
+    }));
+    total.value = res.total;
+
+    // 如果还没有推荐模型，取前3个作为推荐
+    if (recommendedModels.value.length === 0 && res.list.length > 0) {
+      recommendedModels.value = models.value.slice(0, 3);
+    }
+  } catch (error: any) {
+    // 如果是取消错误，静默处理
+    if (error?.name === 'CanceledError' || error?.code === 'ERR_CANCELED' || signal.aborted) {
+      return;
+    }
+    console.error('获取模型列表失败:', error);
+    ElMessage.error('获取模型列表失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 监听筛选条件变化，重置页码并重新加载
+watch([searchQuery, selectedCategory, selectedSort, priceFilter], () => {
+  currentPage.value = 1;
+  fetchModelList();
+});
+
+// 监听页码变化
+watch([currentPage, pageSize], () => {
+  fetchModelList();
+});
+
+// 分页处理
+function handleSizeChange(size: number) {
+  pageSize.value = size;
+  fetchModelList();
+}
+
+function handleCurrentChange(page: number) {
+  currentPage.value = page;
+  fetchModelList();
+}
+
+// 页面加载时获取数据
+onMounted(async () => {
+  await loadCategories();
+  await fetchModelList();
+});
+
+// 组件卸载时取消请求
+onUnmounted(() => {
+  abortController?.abort();
+});
+
+// 跳转到详情页
+function goToDetail(model: MarketModel) {
+  router.push(`/market/${model.id}`);
+}
+
+// 格式化数字
+function formatNumber(num: number): string {
+  if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num.toString();
+}
+
+// 引用模型
+async function handleFork(model: MarketModel, event: Event) {
+  event.stopPropagation();
+  try {
+    await forkThinkingModelApi({
+      sourceModelId: model.id,
+      name: model.name + ' (副本)',
+    });
+    ElMessage.success('已创建副本到您的模型库');
+  } catch (error) {
+    console.error('引用失败:', error);
+    ElMessage.error('引用失败');
+  }
+}
+
+// 获取分类图标
+function getCategoryIcon(categoryId: number): string {
+  const cat = categories.value.find((c) => c.id === categoryId);
+  return cat?.icon || '📁';
+}
+
+// 获取分类名称
+function getCategoryName(categoryId: number): string {
+  const cat = categories.value.find((c) => c.id === categoryId);
+  return cat?.name || '';
+}
+</script>
 
 <style scoped>
 .line-clamp-1 {

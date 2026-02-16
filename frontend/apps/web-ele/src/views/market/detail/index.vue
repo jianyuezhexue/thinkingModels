@@ -1,242 +1,3 @@
-<script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-
-import { Page } from '@vben/common-ui';
-
-import {
-  ElButton,
-  ElCard,
-  ElTabs,
-  ElTabPane,
-  ElInput,
-  ElAvatar,
-  ElTag,
-  ElEmpty,
-  ElMessage,
-  ElSkeleton,
-  ElSkeletonItem,
-} from 'element-plus';
-
-import {
-  getModelDetailApi,
-  getRecommendedModelsApi,
-  adoptModelApi,
-  purchaseModelApi,
-  forkModelApi,
-  likeModelApi,
-  type ModelApi,
-} from '#/api';
-
-// 路由
-const route = useRoute();
-const router = useRouter();
-const modelId = computed(() => route.params.id as string);
-
-// 加载状态
-const loading = ref(true);
-
-// 模型数据
-const model = ref<ModelApi.ThinkingModel | null>(null);
-
-// 相关推荐
-const relatedModels = ref<ModelApi.ThinkingModel[]>([]);
-
-// 当前激活的Tab
-const activeTab = ref('guide');
-
-// 练习记录（模拟数据）
-const practiceRecords = ref([
-  {
-    id: 'p1',
-    user: { id: 'u20', name: '王思维', avatar: 'https://avatar.vercel.sh/wangsw.svg?text=WS', isCertified: true },
-    topicTitle: '如何用SWOT分析评估新产品上线风险',
-    summary: '通过SWOT分析框架，我系统评估了我们团队新开发的AI助手产品的市场前景。优势在于技术领先，劣势是品牌知名度不足，机会是市场需求增长，威胁是巨头竞争激烈...',
-    createdAt: '2024-02-18 15:30',
-    views: 1256,
-    likes: 89,
-    comments: 23,
-    isExcellent: true,
-  },
-  {
-    id: 'p2',
-    user: { id: 'u21', name: '李策划', avatar: 'https://avatar.vercel.sh/lich.svg?text=LC', isCertified: false },
-    topicTitle: 'SWOT分析在创业计划书中的应用',
-    summary: '在准备融资计划书时，使用SWOT分析帮助投资人快速理解我们的商业模式。将内部资源能力与外部环境结合分析，让融资路演更有说服力...',
-    createdAt: '2024-02-16 09:15',
-    views: 892,
-    likes: 56,
-    comments: 12,
-    isExcellent: true,
-  },
-  {
-    id: 'p3',
-    user: { id: 'u22', name: '张产品', avatar: '', isCertified: true },
-    topicTitle: '产品迭代中的SWOT实战案例',
-    summary: '分享一个真实案例：我们在做产品迭代决策时，通过SWOT分析发现了被忽视的技术债务风险，及时调整了优先级，避免了后期大规模重构...',
-    createdAt: '2024-02-14 16:45',
-    views: 2341,
-    likes: 178,
-    comments: 45,
-    isExcellent: false,
-  },
-]);
-
-// 查看练习详情
-function viewPracticeDetail(id: string) {
-  router.push(`/practices/${id}`);
-}
-
-// 评论相关（模拟数据）
-const newComment = ref('');
-const comments = ref([
-  {
-    id: 'c1',
-    author: { id: 'u10', name: '李思考', avatar: 'https://avatar.vercel.sh/lisk.svg?text=LS' },
-    content: '这个模型在实际工作中非常有用，特别是在做产品规划的时候。建议大家多练习！',
-    createdAt: '2024-02-15 14:30',
-    likes: 23,
-  },
-  {
-    id: 'c2',
-    author: { id: 'u12', name: '赵分析', avatar: 'https://avatar.vercel.sh/zhaofx.svg?text=ZF' },
-    content: '有没有人可以分享一下如何在团队会议中引导大家使用这个思维模型？',
-    createdAt: '2024-02-14 09:15',
-    likes: 15,
-  },
-]);
-
-// 获取模型详情
-async function fetchModelDetail() {
-  loading.value = true;
-  try {
-    const res = await getModelDetailApi(modelId.value);
-    model.value = res;
-    // 获取相关推荐
-    fetchRelatedModels(res.category);
-  } catch (error) {
-    console.error('获取模型详情失败:', error);
-    ElMessage.error('获取模型详情失败');
-  } finally {
-    loading.value = false;
-  }
-}
-
-// 获取相关推荐
-async function fetchRelatedModels(category: string) {
-  try {
-    const res = await getRecommendedModelsApi(category, 4);
-    relatedModels.value = res.filter((m) => m.id !== modelId.value).slice(0, 3);
-  } catch (error) {
-    console.error('获取推荐模型失败:', error);
-  }
-}
-
-// 监听路由变化
-watch(modelId, () => {
-  fetchModelDetail();
-});
-
-// 页面加载时获取数据
-onMounted(() => {
-  fetchModelDetail();
-});
-
-// 格式化数字
-function formatNumber(num: number): string {
-  if (num >= 10000) return (num / 10000).toFixed(1) + '万';
-  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-  return num.toString();
-}
-
-// 加载模型
-async function handleLoad() {
-  if (!model.value) return;
-  try {
-    await adoptModelApi(model.value.id);
-    ElMessage.success('已成功加载到您的模型库');
-  } catch (error) {
-    console.error('加载失败:', error);
-  }
-}
-
-// 购买模型
-async function handlePurchase() {
-  if (!model.value) return;
-  try {
-    await purchaseModelApi(model.value.id);
-    ElMessage.success('购买成功！已添加到您的模型库');
-  } catch (error) {
-    console.error('购买失败:', error);
-  }
-}
-
-// 引用模型
-async function handleFork() {
-  if (!model.value) return;
-  try {
-    await forkModelApi(model.value.id);
-    ElMessage.success('已创建副本到您的模型库');
-  } catch (error) {
-    console.error('引用失败:', error);
-  }
-}
-
-// 点赞模型
-async function handleLike() {
-  if (!model.value) return;
-  try {
-    await likeModelApi(model.value.id);
-    model.value.stats.likes++;
-    ElMessage.success('已点赞');
-  } catch (error) {
-    console.error('点赞失败:', error);
-  }
-}
-
-// 发表评论
-function handleSubmitComment() {
-  if (!newComment.value.trim()) {
-    ElMessage.warning('请输入评论内容');
-    return;
-  }
-  comments.value.unshift({
-    id: Date.now().toString(),
-    author: { id: 'me', name: '我', avatar: 'https://avatar.vercel.sh/me.svg?text=ME' },
-    content: newComment.value,
-    createdAt: new Date().toLocaleString('zh-CN'),
-    likes: 0,
-  });
-  newComment.value = '';
-  ElMessage.success('评论已发布');
-}
-
-// 跳转到相关模型
-function goToRelatedModel(id: string) {
-  router.push(`/market/${id}`);
-}
-
-// 返回市场
-function goBack() {
-  router.push('/market');
-}
-
-// 跳转到创建课题页面
-function goToCreateTopic() {
-  router.push('/my-topics/create');
-}
-
-// 格式化 Markdown 内容为 HTML
-const formattedContent = computed(() => {
-  if (!model.value?.content) return '';
-  return model.value.content
-    .replace(/\n/g, '<br>')
-    .replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-6 mb-3 text-gray-800">$1</h2>')
-    .replace(/### (.*)/g, '<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-700">$1</h3>')
-    .replace(/\d\. \*\*(.*)\*\*/g, '<strong class="text-purple-700">$1</strong>');
-});
-</script>
-
 <template>
   <Page title="模型详情" description="深入了解思维模型，开始你的思考之旅" content-class="p-6 bg-gray-50">
     <!-- 返回按钮 -->
@@ -777,6 +538,245 @@ const formattedContent = computed(() => {
     </ElCard>
   </Page>
 </template>
+
+<script lang="ts" setup>
+import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+
+import { Page } from '@vben/common-ui';
+
+import {
+  ElButton,
+  ElCard,
+  ElTabs,
+  ElTabPane,
+  ElInput,
+  ElAvatar,
+  ElTag,
+  ElEmpty,
+  ElMessage,
+  ElSkeleton,
+  ElSkeletonItem,
+} from 'element-plus';
+
+import {
+  getModelDetailApi,
+  getRecommendedModelsApi,
+  adoptModelApi,
+  purchaseModelApi,
+  forkModelApi,
+  likeModelApi,
+  type ModelApi,
+} from '#/api';
+
+// 路由
+const route = useRoute();
+const router = useRouter();
+const modelId = computed(() => route.params.id as string);
+
+// 加载状态
+const loading = ref(true);
+
+// 模型数据
+const model = ref<ModelApi.ThinkingModel | null>(null);
+
+// 相关推荐
+const relatedModels = ref<ModelApi.ThinkingModel[]>([]);
+
+// 当前激活的Tab
+const activeTab = ref('guide');
+
+// 练习记录（模拟数据）
+const practiceRecords = ref([
+  {
+    id: 'p1',
+    user: { id: 'u20', name: '王思维', avatar: 'https://avatar.vercel.sh/wangsw.svg?text=WS', isCertified: true },
+    topicTitle: '如何用SWOT分析评估新产品上线风险',
+    summary: '通过SWOT分析框架，我系统评估了我们团队新开发的AI助手产品的市场前景。优势在于技术领先，劣势是品牌知名度不足，机会是市场需求增长，威胁是巨头竞争激烈...',
+    createdAt: '2024-02-18 15:30',
+    views: 1256,
+    likes: 89,
+    comments: 23,
+    isExcellent: true,
+  },
+  {
+    id: 'p2',
+    user: { id: 'u21', name: '李策划', avatar: 'https://avatar.vercel.sh/lich.svg?text=LC', isCertified: false },
+    topicTitle: 'SWOT分析在创业计划书中的应用',
+    summary: '在准备融资计划书时，使用SWOT分析帮助投资人快速理解我们的商业模式。将内部资源能力与外部环境结合分析，让融资路演更有说服力...',
+    createdAt: '2024-02-16 09:15',
+    views: 892,
+    likes: 56,
+    comments: 12,
+    isExcellent: true,
+  },
+  {
+    id: 'p3',
+    user: { id: 'u22', name: '张产品', avatar: '', isCertified: true },
+    topicTitle: '产品迭代中的SWOT实战案例',
+    summary: '分享一个真实案例：我们在做产品迭代决策时，通过SWOT分析发现了被忽视的技术债务风险，及时调整了优先级，避免了后期大规模重构...',
+    createdAt: '2024-02-14 16:45',
+    views: 2341,
+    likes: 178,
+    comments: 45,
+    isExcellent: false,
+  },
+]);
+
+// 查看练习详情
+function viewPracticeDetail(id: string) {
+  router.push(`/practices/${id}`);
+}
+
+// 评论相关（模拟数据）
+const newComment = ref('');
+const comments = ref([
+  {
+    id: 'c1',
+    author: { id: 'u10', name: '李思考', avatar: 'https://avatar.vercel.sh/lisk.svg?text=LS' },
+    content: '这个模型在实际工作中非常有用，特别是在做产品规划的时候。建议大家多练习！',
+    createdAt: '2024-02-15 14:30',
+    likes: 23,
+  },
+  {
+    id: 'c2',
+    author: { id: 'u12', name: '赵分析', avatar: 'https://avatar.vercel.sh/zhaofx.svg?text=ZF' },
+    content: '有没有人可以分享一下如何在团队会议中引导大家使用这个思维模型？',
+    createdAt: '2024-02-14 09:15',
+    likes: 15,
+  },
+]);
+
+// 获取模型详情
+async function fetchModelDetail() {
+  loading.value = true;
+  try {
+    const res = await getModelDetailApi(modelId.value);
+    model.value = res;
+    // 获取相关推荐
+    fetchRelatedModels(res.category);
+  } catch (error) {
+    console.error('获取模型详情失败:', error);
+    ElMessage.error('获取模型详情失败');
+  } finally {
+    loading.value = false;
+  }
+}
+
+// 获取相关推荐
+async function fetchRelatedModels(category: string) {
+  try {
+    const res = await getRecommendedModelsApi(category, 4);
+    relatedModels.value = res.filter((m) => m.id !== modelId.value).slice(0, 3);
+  } catch (error) {
+    console.error('获取推荐模型失败:', error);
+  }
+}
+
+// 监听路由变化
+watch(modelId, () => {
+  fetchModelDetail();
+});
+
+// 页面加载时获取数据
+onMounted(() => {
+  fetchModelDetail();
+});
+
+// 格式化数字
+function formatNumber(num: number): string {
+  if (num >= 10000) return (num / 10000).toFixed(1) + '万';
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+  return num.toString();
+}
+
+// 加载模型
+async function handleLoad() {
+  if (!model.value) return;
+  try {
+    await adoptModelApi(model.value.id);
+    ElMessage.success('已成功加载到您的模型库');
+  } catch (error) {
+    console.error('加载失败:', error);
+  }
+}
+
+// 购买模型
+async function handlePurchase() {
+  if (!model.value) return;
+  try {
+    await purchaseModelApi(model.value.id);
+    ElMessage.success('购买成功！已添加到您的模型库');
+  } catch (error) {
+    console.error('购买失败:', error);
+  }
+}
+
+// 引用模型
+async function handleFork() {
+  if (!model.value) return;
+  try {
+    await forkModelApi(model.value.id);
+    ElMessage.success('已创建副本到您的模型库');
+  } catch (error) {
+    console.error('引用失败:', error);
+  }
+}
+
+// 点赞模型
+async function handleLike() {
+  if (!model.value) return;
+  try {
+    await likeModelApi(model.value.id);
+    model.value.stats.likes++;
+    ElMessage.success('已点赞');
+  } catch (error) {
+    console.error('点赞失败:', error);
+  }
+}
+
+// 发表评论
+function handleSubmitComment() {
+  if (!newComment.value.trim()) {
+    ElMessage.warning('请输入评论内容');
+    return;
+  }
+  comments.value.unshift({
+    id: Date.now().toString(),
+    author: { id: 'me', name: '我', avatar: 'https://avatar.vercel.sh/me.svg?text=ME' },
+    content: newComment.value,
+    createdAt: new Date().toLocaleString('zh-CN'),
+    likes: 0,
+  });
+  newComment.value = '';
+  ElMessage.success('评论已发布');
+}
+
+// 跳转到相关模型
+function goToRelatedModel(id: string) {
+  router.push(`/market/${id}`);
+}
+
+// 返回市场
+function goBack() {
+  router.push('/market');
+}
+
+// 跳转到创建课题页面
+function goToCreateTopic() {
+  router.push('/my-topics/create');
+}
+
+// 格式化 Markdown 内容为 HTML
+const formattedContent = computed(() => {
+  if (!model.value?.content) return '';
+  return model.value.content
+    .replace(/\n/g, '<br>')
+    .replace(/## (.*)/g, '<h2 class="text-xl font-bold mt-6 mb-3 text-gray-800">$1</h2>')
+    .replace(/### (.*)/g, '<h3 class="text-lg font-semibold mt-4 mb-2 text-gray-700">$1</h3>')
+    .replace(/\d\. \*\*(.*)\*\*/g, '<strong class="text-purple-700">$1</strong>');
+});
+</script>
 
 <style scoped>
 .model-detail-tabs :deep(.el-tabs__header) {

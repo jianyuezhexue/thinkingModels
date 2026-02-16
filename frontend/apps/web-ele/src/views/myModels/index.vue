@@ -243,7 +243,7 @@ function goToDetail(model: MyModel) {
 
 function handleEdit(model: MyModel, event: Event) {
   event.stopPropagation();
-  router.push(`/my-models/${model.id}/edit`);
+  router.push(`/my-models/create?id=${model.id}`);
 }
 
 async function handleDelete(model: MyModel, event: Event) {
