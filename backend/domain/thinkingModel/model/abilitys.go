@@ -54,9 +54,9 @@ func (m *ModelEntity) SubmitForReview() error {
 	if m.Status == StatusReviewing {
 		return errors.New("模型正在审核中")
 	}
-	if m.Status == StatusPublished {
-		return errors.New("模型已发布，无需审核")
-	}
+	// if m.Status == StatusPublished {
+	// 	return errors.New("模型已发布，无需审核")
+	// }
 	m.Status = StatusReviewing
 	return nil
 }

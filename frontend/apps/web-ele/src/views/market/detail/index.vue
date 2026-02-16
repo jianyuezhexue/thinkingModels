@@ -13,31 +13,8 @@
       </button>
     </div>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div class="lg:col-span-2 space-y-6">
-        <ElCard shadow="hover" class="!rounded-xl">
-          <ElSkeleton animated>
-            <template #template>
-              <ElSkeletonItem variant="image" style="width: 100%; height: 256px; border-radius: 12px" />
-              <div class="mt-4 space-y-3">
-                <ElSkeletonItem variant="h1" style="width: 50%" />
-                <ElSkeletonItem variant="text" style="width: 80%" />
-                <ElSkeletonItem variant="text" style="width: 60%" />
-              </div>
-            </template>
-          </ElSkeleton>
-        </ElCard>
-      </div>
-      <div class="space-y-6">
-        <ElCard shadow="hover" class="!rounded-xl">
-          <ElSkeleton :rows="4" animated />
-        </ElCard>
-      </div>
-    </div>
-
     <!-- 内容 -->
-    <div v-else-if="model" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <!-- 左侧：模型信息 -->
       <div class="lg:col-span-2 space-y-6">
         <!-- 封面和基本信息 -->
@@ -380,25 +357,25 @@
               v-if="model.isFree"
               type="primary"
               size="large"
-              class="w-full !bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full !h-12"
+              class="w-full !bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full !h-14 !text-base"
               @click="handleLoad"
             >
               <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
               </svg>
-              加载到我的模型
+              立即使用
             </ElButton>
             <ElButton
               v-else
               type="success"
               size="large"
-              class="w-full !rounded-full !h-12"
+              class="w-full !rounded-full !h-16 !text-base !font-semibold"
               @click="handlePurchase"
             >
-              <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="h-6 w-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
-              购买 ¥{{ model.price }}
+              立即购买 · ¥{{ model.price }}
             </ElButton>
             <ElButton
               size="large"
@@ -524,24 +501,12 @@
         </ElCard>
       </div>
     </div>
-
-    <!-- 错误状态 -->
-    <ElCard v-else shadow="hover" class="!rounded-xl">
-      <ElEmpty description="模型不存在或已被删除">
-        <template #image>
-          <div class="text-6xl">😕</div>
-        </template>
-        <ElButton type="primary" class="!bg-purple-600 !border-purple-600 !rounded-full mt-4" @click="goBack">
-          返回模型市场
-        </ElButton>
-      </ElEmpty>
-    </ElCard>
   </Page>
 </template>
 
 <script lang="ts" setup>
-import { computed, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
@@ -555,33 +520,78 @@ import {
   ElTag,
   ElEmpty,
   ElMessage,
-  ElSkeleton,
-  ElSkeletonItem,
 } from 'element-plus';
 
-import {
-  getModelDetailApi,
-  getRecommendedModelsApi,
-  adoptModelApi,
-  purchaseModelApi,
-  forkModelApi,
-  likeModelApi,
-  type ModelApi,
-} from '#/api';
-
 // 路由
-const route = useRoute();
 const router = useRouter();
-const modelId = computed(() => route.params.id as string);
 
-// 加载状态
-const loading = ref(true);
+// 模型数据（静态示例数据）
+const model = ref({
+  id: '1',
+  title: 'SWOT 分析法',
+  description: 'SWOT分析是一种战略规划工具，用于评估优势（Strengths）、劣势（Weaknesses）、机会（Opportunities）和威胁（Threats）。帮助个人和组织全面了解自身状况，制定更有效的策略。',
+  cover: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800',
+  category: '战略分析',
+  isFree: true,
+  price: 0,
+  content: `## SWOT 分析法详解
 
-// 模型数据
-const model = ref<ModelApi.ThinkingModel | null>(null);
+### 什么是 SWOT 分析？
 
-// 相关推荐
-const relatedModels = ref<ModelApi.ThinkingModel[]>([]);
+SWOT 分析是一种常用的战略分析工具，通过系统性地分析内部优势与劣势、外部机会与威胁，帮助决策者全面了解现状，制定合理的发展策略。
+
+### SWOT 四个维度
+
+1. **优势（Strengths）**：组织内部的积极因素，如技术优势、品牌影响力等
+2. **劣势（Weaknesses）**：组织内部的消极因素，如资源不足、管理缺陷等
+3. **机会（Opportunities）**：外部环境中的有利因素，如市场增长、政策支持等
+4. **威胁（Threats）**：外部环境中的不利因素，如竞争加剧、技术变革等
+
+### 使用步骤
+
+1. 明确分析目标和范围
+2. 收集相关信息和数据
+3. 分别列出 S、W、O、T 四个维度的要素
+4. 分析各要素之间的关系
+5. 制定相应的战略方案`,
+  tags: ['战略规划', '决策分析', '商业分析', '团队协作'],
+  author: {
+    id: 'author1',
+    name: '张思维',
+    avatar: 'https://avatar.vercel.sh/zhangsw.svg?text=ZS',
+    bio: '资深战略顾问，专注企业战略规划10年',
+  },
+  stats: {
+    adoptions: 12580,
+    practices: 8960,
+    discussions: 2340,
+    forks: 1560,
+    likes: 8920,
+  },
+  updatedAt: '2024-02-20',
+});
+
+// 相关推荐（静态数据）
+const relatedModels = ref([
+  {
+    id: '2',
+    title: '波特五力分析',
+    category: '战略分析',
+    stats: { adoptions: 8560 },
+  },
+  {
+    id: '3',
+    title: 'PEST 分析法',
+    category: '战略分析',
+    stats: { adoptions: 6780 },
+  },
+  {
+    id: '4',
+    title: '价值链分析',
+    category: '商业分析',
+    stats: { adoptions: 5230 },
+  },
+]);
 
 // 当前激活的Tab
 const activeTab = ref('guide');
@@ -647,42 +657,6 @@ const comments = ref([
   },
 ]);
 
-// 获取模型详情
-async function fetchModelDetail() {
-  loading.value = true;
-  try {
-    const res = await getModelDetailApi(modelId.value);
-    model.value = res;
-    // 获取相关推荐
-    fetchRelatedModels(res.category);
-  } catch (error) {
-    console.error('获取模型详情失败:', error);
-    ElMessage.error('获取模型详情失败');
-  } finally {
-    loading.value = false;
-  }
-}
-
-// 获取相关推荐
-async function fetchRelatedModels(category: string) {
-  try {
-    const res = await getRecommendedModelsApi(category, 4);
-    relatedModels.value = res.filter((m) => m.id !== modelId.value).slice(0, 3);
-  } catch (error) {
-    console.error('获取推荐模型失败:', error);
-  }
-}
-
-// 监听路由变化
-watch(modelId, () => {
-  fetchModelDetail();
-});
-
-// 页面加载时获取数据
-onMounted(() => {
-  fetchModelDetail();
-});
-
 // 格式化数字
 function formatNumber(num: number): string {
   if (num >= 10000) return (num / 10000).toFixed(1) + '万';
@@ -690,48 +664,26 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-// 加载模型
-async function handleLoad() {
-  if (!model.value) return;
-  try {
-    await adoptModelApi(model.value.id);
-    ElMessage.success('已成功加载到您的模型库');
-  } catch (error) {
-    console.error('加载失败:', error);
-  }
+// 加载模型（静态演示）
+function handleLoad() {
+  ElMessage.success('已成功加载到您的模型库');
 }
 
-// 购买模型
-async function handlePurchase() {
-  if (!model.value) return;
-  try {
-    await purchaseModelApi(model.value.id);
-    ElMessage.success('购买成功！已添加到您的模型库');
-  } catch (error) {
-    console.error('购买失败:', error);
-  }
+// 购买模型（静态演示）
+function handlePurchase() {
+  ElMessage.success('购买成功！已添加到您的模型库');
 }
 
-// 引用模型
-async function handleFork() {
-  if (!model.value) return;
-  try {
-    await forkModelApi(model.value.id);
-    ElMessage.success('已创建副本到您的模型库');
-  } catch (error) {
-    console.error('引用失败:', error);
-  }
+// 引用模型（静态演示）
+function handleFork() {
+  ElMessage.success('已创建副本到您的模型库');
 }
 
-// 点赞模型
-async function handleLike() {
-  if (!model.value) return;
-  try {
-    await likeModelApi(model.value.id);
+// 点赞模型（静态演示）
+function handleLike() {
+  if (model.value) {
     model.value.stats.likes++;
     ElMessage.success('已点赞');
-  } catch (error) {
-    console.error('点赞失败:', error);
   }
 }
 

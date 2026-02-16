@@ -207,21 +207,14 @@
               </div>
 
               <!-- 操作按钮 -->
-              <div class="mt-3 flex gap-2">
+              <div class="mt-3">
                 <ElButton
                   type="primary"
-                  class="flex-1 !bg-purple-600 !border-purple-600 hover:!bg-purple-700 !rounded-full"
+                  class="w-full !bg-purple-600 !border-purple-600 hover:!bg-purple-700 !h-8 !rounded-full"
                   size="small"
-                  @click="handleFork(model, $event)"
-                >
-                  {{ model.isFree ? '立即使用' : '引用创建' }}
-                </ElButton>
-                <ElButton
-                  size="small"
-                  class="!rounded-full"
                   @click="goToDetail(model); $event.stopPropagation()"
                 >
-                  详情
+                  {{ model.isFree ? '立即使用' : '立即购买' }}
                 </ElButton>
               </div>
             </div>
@@ -395,7 +388,6 @@ import {
 
 import {
   getThinkingModelListApi,
-  forkThinkingModelApi,
 } from '#/api/thinking/model';
 import { getAllCategoriesApi } from '#/api/master/category';
 
@@ -602,21 +594,6 @@ function formatNumber(num: number): string {
   if (num >= 10000) return (num / 10000).toFixed(1) + '万';
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
   return num.toString();
-}
-
-// 引用模型
-async function handleFork(model: MarketModel, event: Event) {
-  event.stopPropagation();
-  try {
-    await forkThinkingModelApi({
-      sourceModelId: model.id,
-      name: model.name + ' (副本)',
-    });
-    ElMessage.success('已创建副本到您的模型库');
-  } catch (error) {
-    console.error('引用失败:', error);
-    ElMessage.error('引用失败');
-  }
 }
 
 // 获取分类图标
