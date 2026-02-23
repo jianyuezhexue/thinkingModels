@@ -22,6 +22,7 @@ export namespace ThinkingModelApi {
     name: string;
     description: string;
     coverImage: string;
+    videoUrl: string;
     icon: string;
     categoryId: number;
     price: number;
@@ -51,6 +52,7 @@ export namespace ThinkingModelApi {
     name: string;
     description?: string;
     coverImage?: string;
+    videoUrl?: string;
     icon?: string;
     categoryId: number;
     price?: number;
@@ -69,6 +71,7 @@ export namespace ThinkingModelApi {
     name: string;
     description?: string;
     coverImage?: string;
+    videoUrl?: string;
     icon?: string;
     categoryId: number;
     price?: number;

@@ -124,6 +124,24 @@
               </div>
             </ElFormItem>
 
+            <!-- 视频地址 -->
+            <ElFormItem label="视频地址">
+              <ElInput
+                v-model="form.videoUrl"
+                placeholder="输入视频链接（可选），支持 YouTube、Bilibili 等平台"
+                maxlength="500"
+                show-word-limit
+                class="!rounded-lg"
+              >
+                <template #prefix>
+                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                  </svg>
+                </template>
+              </ElInput>
+              <div class="text-xs text-gray-400 mt-1">添加视频教程链接，帮助用户更好地理解和使用模型</div>
+            </ElFormItem>
+
             <!-- 模型名称 -->
             <ElFormItem label="模型名称" prop="title">
               <ElInput
@@ -718,6 +736,7 @@ const form = reactive({
   category: [] as string[],
   tags: [] as string[],
   cover: '',
+  videoUrl: '',
   isFree: true,
   price: 29,
   content: {
@@ -854,6 +873,7 @@ onMounted(async () => {
       form.title = res.name;
       form.description = res.description || '';
       form.cover = res.coverImage || '';
+      form.videoUrl = res.videoUrl || '';
       form.category = res.categoryId ? [String(res.categoryId)] : [];
       form.isFree = res.isFree;
       form.price = res.price || 29;
@@ -985,6 +1005,7 @@ async function handleSubmit() {
       difficulty: 2, // 默认难度：1=简单 2=中等 3=困难
       estimatedTime: 30, // 默认预估时间（分钟）
       coverImage: form.cover,
+      videoUrl: form.videoUrl,
       content: JSON.stringify({
         overview: form.content.overview,
         steps: form.content.steps.filter((s: any) => s.title.trim() || s.description.trim()),
@@ -1035,6 +1056,7 @@ async function handleSaveDraft() {
       difficulty: 2,
       estimatedTime: 30,
       coverImage: form.cover,
+      videoUrl: form.videoUrl,
       content: JSON.stringify({
         overview: form.content.overview,
         steps: form.content.steps.filter((s: any) => s.title.trim() || s.description.trim()),

@@ -32,8 +32,9 @@ type ModelEntity struct {
 	Description   string  `json:"description" type:"db" comment:"简短描述"`
 	Overview      string  `json:"overview" type:"db" comment:"概述"`
 	Icon          string  `json:"icon" type:"db" comment:"图标"`
-	CoverImage    string  `json:"coverImage" type:"db" comment:"封面图片"`
-	CategoryId    uint64  `json:"categoryId" type:"db" comment:"分类ID"`
+	CoverImage    string  `json:"coverImage" type:"db" gorm:"column:cover_image" comment:"封面图片"`
+	VideoUrl      string  `json:"videoUrl" type:"db" gorm:"column:video_url" comment:"视频地址"`
+	CategoryId    uint64  `json:"categoryId" type:"db" gorm:"column:category_id" comment:"分类ID"`
 	Content       string  `json:"content" type:"db" comment:"模型内容(JSON)"`
 	UsageGuide    string  `json:"usageGuide" type:"db" comment:"使用指南"`
 	Examples      string  `json:"examples" type:"db" comment:"案例(JSON)"`

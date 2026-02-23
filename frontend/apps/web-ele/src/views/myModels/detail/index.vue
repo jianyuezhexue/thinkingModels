@@ -56,6 +56,7 @@ interface ModelDetail {
   name: string;
   description: string;
   coverImage: string;
+  videoUrl: string;
   icon: string;
   categoryId: number;
   categoryName?: string;
@@ -261,6 +262,60 @@ function getDifficultyConfig(difficulty: number) {
   };
   return config[difficulty] || { label: '未知', color: '#909399' };
 }
+
+// 视频平台类型
+type VideoPlatform = 'bilibili' | 'youtube' | 'unknown';
+
+// 视频嵌入信息
+interface VideoEmbed {
+  platform: VideoPlatform;
+  embedUrl: string;
+  title: string;
+}
+
+// 解析视频 URL，返回嵌入信息
+function parseVideoUrl(url: string): VideoEmbed | null {
+  if (!url || !url.trim()) return null;
+
+  // Bilibili 视频匹配
+  // 支持: https://www.bilibili.com/video/BV1xxx 或 https://www.bilibili.com/video/BV1xxx?p=1
+  const bilibiliMatch = url.match(/bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/);
+  if (bilibiliMatch) {
+    const bvid = bilibiliMatch[1];
+    // 提取分P参数
+    const pageMatch = url.match(/[?&]p=(\d+)/);
+    const page = pageMatch ? pageMatch[1] : '1';
+    return {
+      platform: 'bilibili',
+      embedUrl: `//player.bilibili.com/player.html?bvid=${bvid}&page=${page}&high_quality=1&danmaku=0`,
+      title: 'Bilibili 视频',
+    };
+  }
+
+  // YouTube 视频匹配
+  // 支持: https://www.youtube.com/watch?v=xxx 或 https://youtu.be/xxx
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (youtubeMatch) {
+    const videoId = youtubeMatch[1];
+    return {
+      platform: 'youtube',
+      embedUrl: `https://www.youtube.com/embed/${videoId}`,
+      title: 'YouTube 视频',
+    };
+  }
+
+  return null;
+}
+
+// 判断是否有有效视频
+function hasValidVideo(videoUrl: string): boolean {
+  return parseVideoUrl(videoUrl) !== null;
+}
+
+// 获取视频嵌入信息
+function getVideoEmbed(videoUrl: string): VideoEmbed | null {
+  return parseVideoUrl(videoUrl);
+}
 </script>
 
 <template>
@@ -436,6 +491,27 @@ function getDifficultyConfig(difficulty: number) {
                 <span class="font-semibold text-gray-700">模型概述</span>
               </div>
             </template>
+
+            <!-- 视频展示区域 -->
+            <div v-if="model.videoUrl && hasValidVideo(model.videoUrl)" class="mb-6">
+              <div class="aspect-video w-full rounded-xl overflow-hidden bg-gray-100">
+                <iframe
+                  :src="getVideoEmbed(model.videoUrl)?.embedUrl"
+                  :title="getVideoEmbed(model.videoUrl)?.title"
+                  class="w-full h-full"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              <div class="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+                <span>{{ getVideoEmbed(model.videoUrl)?.platform === 'bilibili' ? 'Bilibili' : 'YouTube' }} 视频教程</span>
+              </div>
+            </div>
+
             <div class="prose max-w-none">
               <p class="text-gray-600 leading-relaxed whitespace-pre-line">
                 {{ modelContent.overview || model.overview || '暂无概述' }}

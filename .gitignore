@@ -52,3 +52,5 @@ backend/__debug_bin*
 frontend/.pnpm-store/
 .claude/ui-ux-pro-max-skill-main/
 backend/vendor/
+.setting/
+backend/app

@@ -17,6 +17,7 @@ type CreateModel struct {
 	Name          string  `json:"name" binding:"required,max=100"`
 	Description   string  `json:"description" binding:"max=2000"`
 	CoverImage    string  `json:"coverImage" binding:"max=500"`
+	VideoUrl      string  `json:"videoUrl" binding:"max=500"`
 	Icon          string  `json:"icon" binding:"max=200"`
 	CategoryId    uint64  `json:"categoryId" binding:"required"`
 	Price         float64 `json:"price" binding:"min=0"`
@@ -35,6 +36,7 @@ type UpdateModel struct {
 	Name          string  `json:"name" binding:"required,max=100"`
 	Description   string  `json:"description" binding:"max=2000"`
 	CoverImage    string  `json:"coverImage" binding:"max=500"`
+	VideoUrl      string  `json:"videoUrl" binding:"max=500"`
 	Icon          string  `json:"icon" binding:"max=200"`
 	CategoryId    uint64  `json:"categoryId" binding:"required"`
 	Price         float64 `json:"price" binding:"min=0"`
@@ -59,7 +61,7 @@ type UnpublishModel struct {
 // ReviewModel 审核模型请求
 type ReviewModel struct {
 	Id       uint64 `json:"id" binding:"required"`
-	Approved bool   `json:"approved"`         // true=通过, false=驳回
+	Approved bool   `json:"approved"`               // true=通过, false=驳回
 	Note     string `json:"note" binding:"max=500"` // 审核意见
 }
 
@@ -77,7 +79,7 @@ type SearchModel struct {
 	Id         uint64  `json:"id" form:"id" search:"type:eq;column:id;table:thinking_models"`
 	Name       string  `json:"name" form:"name" search:"type:like;column:name;table:thinking_models"`
 	CategoryId uint64  `json:"categoryId" form:"categoryId" search:"type:eq;column:category_id;table:thinking_models"`
-	Status     int     `json:"status" form:"status" search:"type:eq;column:status;table:thinking_models"`
+	Status     string  `json:"status" form:"status" search:"type:eq;column:status;table:thinking_models"`
 	Difficulty int     `json:"difficulty" form:"difficulty" search:"type:eq;column:difficulty;table:thinking_models"`
 	MinPrice   float64 `json:"minPrice" form:"minPrice" search:"type:gte;column:price;table:thinking_models"`
 	MaxPrice   float64 `json:"maxPrice" form:"maxPrice" search:"type:lte;column:price;table:thinking_models"`
@@ -115,6 +117,7 @@ type ModelInfo struct {
 	Name          string      `json:"name"`
 	Description   string      `json:"description"`
 	CoverImage    string      `json:"coverImage"`
+	VideoUrl      string      `json:"videoUrl"`
 	Icon          string      `json:"icon"`
 	CategoryId    uint64      `json:"categoryId"`
 	Price         float64     `json:"price"`

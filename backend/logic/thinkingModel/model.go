@@ -282,6 +282,7 @@ func convertToModelInfo(entity any) *model.ModelInfo {
 		Overview:      e.Overview,
 		Icon:          e.Icon,
 		CoverImage:    e.CoverImage,
+		VideoUrl:      e.VideoUrl,
 		CategoryId:    e.CategoryId,
 		Price:         e.Price,
 		IsFree:        e.Price == 0,
