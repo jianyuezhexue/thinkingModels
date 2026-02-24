@@ -143,6 +143,12 @@ export namespace ThinkingModelApi {
     approved: boolean;
     note?: string;
   }
+
+  /** 点赞模型响应 */
+  export interface LikeModelResult {
+    liked: boolean;
+    likeCount: number;
+  }
 }
 
 /**
@@ -243,4 +249,11 @@ export async function forkThinkingModelApi(data: ThinkingModelApi.ForkModelParam
  */
 export async function reviewThinkingModelApi(data: ThinkingModelApi.ReviewModelParams) {
   return requestClient.post<ThinkingModelApi.ModelInfo>('/thinkingModel/model/review', data);
+}
+
+/**
+ * 点赞思维模型
+ */
+export async function likeThinkingModelApi(id: number) {
+  return requestClient.post<ThinkingModelApi.LikeModelResult>(`/thinkingModel/model/like/${id}`);
 }

@@ -165,3 +165,14 @@ type StatusCountsResponse struct {
 	Approved int64 `json:"approved"` // 已发布 (status=1)
 	Rejected int64 `json:"rejected"` // 已驳回 (status=4)
 }
+
+// LikeModel 点赞模型请求
+type LikeModel struct {
+	Id uint64 `json:"id" binding:"required"`
+}
+
+// LikeModelResponse 点赞模型响应
+type LikeModelResponse struct {
+	Liked    bool  `json:"liked"`    // 是否点赞成功（false 表示今天已点赞）
+	LikeCount int64 `json:"likeCount"` // 当前点赞总数
+}

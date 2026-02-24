@@ -225,3 +225,27 @@ func (a *Model) StatusCounts(ctx *gin.Context) {
 
 	a.Success(res, "查询成功")
 }
+
+// Like 点赞模型
+func (a *Model) Like(ctx *gin.Context) {
+	a.Ctx = ctx
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	logic := thinkingModel.NewModelLogic(ctx)
+	res, err := logic.Like(id)
+	if err != nil {
+		a.Error(err)
+		return
+	}
+
+	if res.Liked {
+		a.Success(res, "点赞成功")
+	} else {
+		a.Success(res, "今天已经点赞过了")
+	}
+}

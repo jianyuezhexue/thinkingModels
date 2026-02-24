@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jianyuezhexue/base/localCache"
 	"thinkingModels/domain/thinkingModel/model"
 	"thinkingModels/logic"
 )
@@ -362,5 +364,64 @@ func (l *ModelLogic) StatusCounts() (*model.StatusCountsResponse, error) {
 		Pending:  pending,
 		Approved: approved,
 		Rejected: rejected,
+	}, nil
+}
+
+// Like 点赞模型
+// 使用 localCache 限制每个用户每天每个模型只能点赞一次
+func (l *ModelLogic) Like(id uint64) (*model.LikeModelResponse, error) {
+	// 获取当前用户ID
+	currUserId, _ := l.Ctx.Get("currUserId")
+	userId, ok := currUserId.(string)
+	if !ok || userId == "" {
+		return nil, errors.New("用户未登录")
+	}
+
+	// 获取当前日期（用于构建缓存 key）
+	today := time.Now().Format("2006-01-02")
+
+	// 构建缓存 key: like:{userId}:{modelId}:{date}
+	cacheKey := fmt.Sprintf("like:%s:%d:%s", userId, id, today)
+
+	// 检查今天是否已经点赞
+	cache := localCache.NewCache()
+	if _, exists := cache.Get(cacheKey); exists {
+		// 今天已经点赞过，返回当前点赞数
+		entity := model.NewModelEntity(l.Ctx)
+		res, err := entity.LoadById(id)
+		if err != nil {
+			return nil, err
+		}
+		return &model.LikeModelResponse{
+			Liked:     false,
+			LikeCount: res.LikeCount,
+		}, nil
+	}
+
+	// 加载模型实体
+	entity := model.NewModelEntity(l.Ctx)
+	_, err := entity.LoadById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 增加点赞数
+	entity.IncrementLikeCount()
+
+	// 保存更新
+	res, err := entity.Update()
+	if err != nil {
+		return nil, err
+	}
+
+	// 设置缓存，过期时间到当天结束
+	now := time.Now()
+	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+	expiration := endOfDay.Sub(now)
+	cache.Set(cacheKey, true, expiration)
+
+	return &model.LikeModelResponse{
+		Liked:     true,
+		LikeCount: res.LikeCount,
 	}, nil
 }
