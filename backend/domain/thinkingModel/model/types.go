@@ -10,7 +10,7 @@ const (
 	StatusRejected  = 4 // 已驳回
 )
 
-// ==================== 请求DTO ====================
+// ==================== 请求REQ ====================
 
 // CreateModel 创建思维模型请求
 type CreateModel struct {
@@ -22,7 +22,9 @@ type CreateModel struct {
 	CategoryId    uint64  `json:"categoryId" binding:"required"`
 	Price         float64 `json:"price" binding:"min=0"`
 	Content       string  `json:"content"`
-	Overview      string  `json:"overview"`
+	UsageGuide    string  `json:"usageGuide"` // 使用指南（操作步骤）
+	Examples      string  `json:"examples"`   // 案例
+	Tags          string  `json:"tags"`       // 标签(逗号分隔)
 	Difficulty    int     `json:"difficulty" binding:"oneof=1 2 3"`
 	EstimatedTime int     `json:"estimatedTime" binding:"min=1"`
 	Version       string  `json:"version" binding:"max=20"`
@@ -41,7 +43,9 @@ type UpdateModel struct {
 	CategoryId    uint64  `json:"categoryId" binding:"required"`
 	Price         float64 `json:"price" binding:"min=0"`
 	Content       string  `json:"content"`
-	Overview      string  `json:"overview"`
+	UsageGuide    string  `json:"usageGuide"` // 使用指南（操作步骤）
+	Examples      string  `json:"examples"`   // 案例
+	Tags          string  `json:"tags"`       // 标签(逗号分隔)
 	Difficulty    int     `json:"difficulty" binding:"oneof=1 2 3"`
 	EstimatedTime int     `json:"estimatedTime" binding:"min=1"`
 	Version       string  `json:"version" binding:"max=20"`
@@ -94,7 +98,7 @@ type DelModel struct {
 	Ids []uint64 `json:"ids" binding:"required,min=1"`
 }
 
-// ==================== 响应DTO ====================
+// ==================== 响应RESP ====================
 
 // ModelAuthor 模型作者信息
 type ModelAuthor struct {
@@ -122,7 +126,6 @@ type ModelInfo struct {
 	CategoryId    uint64      `json:"categoryId"`
 	Price         float64     `json:"price"`
 	IsFree        bool        `json:"isFree"`
-	Overview      string      `json:"overview"`
 	Difficulty    int         `json:"difficulty"`
 	EstimatedTime int         `json:"estimatedTime"`
 	Status        int         `json:"status"`
@@ -143,7 +146,9 @@ type ModelInfo struct {
 // ModelDetail 思维模型详情DTO（包含完整内容）
 type ModelDetail struct {
 	ModelInfo
-	Content string `json:"content"`
+	Content    string `json:"content"`
+	UsageGuide string `json:"usageGuide"` // 使用指南（操作步骤）
+	Examples   string `json:"examples"`   // 案例
 }
 
 // ListModelResponse 思维模型列表响应

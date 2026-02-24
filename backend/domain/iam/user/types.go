@@ -1,6 +1,6 @@
 package user
 
-// ==================== 请求DTO ====================
+// ==================== 请求REQ ====================
 
 // LoginRequest 登录请求
 type LoginRequest struct {
@@ -11,11 +11,11 @@ type LoginRequest struct {
 
 // RegisterRequest 注册请求
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=20"`  // 用户名
-	Password string `json:"password" binding:"required,min=8"`         // 密码
-	Nickname string `json:"nickname" binding:"max=50"`                 // 昵称
-	Email    string `json:"email" binding:"omitempty,email"`           // 邮箱
-	Phone    string `json:"phone" binding:"omitempty,len=11,numeric"`  // 手机号
+	Username string `json:"username" binding:"required,min=3,max=20"` // 用户名
+	Password string `json:"password" binding:"required,min=8"`        // 密码
+	Nickname string `json:"nickname" binding:"max=50"`                // 昵称
+	Email    string `json:"email" binding:"omitempty,email"`          // 邮箱
+	Phone    string `json:"phone" binding:"omitempty,len=11,numeric"` // 手机号
 }
 
 // UpdateUserRequest 更新用户信息请求
@@ -33,7 +33,7 @@ type UpdatePasswordRequest struct {
 	NewPassword string `json:"newPassword" binding:"required,min=8"`
 }
 
-// ==================== 响应DTO ====================
+// ==================== 响应RESP ====================
 
 // LoginResponse 登录响应
 type LoginResponse struct {
@@ -60,21 +60,21 @@ type UserInfo struct {
 
 // SearchUser 用户搜索条件
 type SearchUser struct {
-	Page       int64  `json:"page" form:"page" search:"page"`                               // 分页
-	PageSize   int64  `json:"pageSize" form:"pageSize" search:"pageSize"`                   // 分页大小
-	ID         uint64 `json:"id" form:"id" search:"type:eq;column:id;table:users"`          // ID精确匹配
-	Username   string `json:"username" form:"username" search:"type:like;column:username;table:users"` // 用户名模糊查询
-	Status     int    `json:"status" form:"status" search:"type:eq;column:status;table:users"`         // 状态
-	Email      string `json:"email" form:"email" search:"type:eq;column:email;table:users"`            // 邮箱
-	Phone      string `json:"phone" form:"phone" search:"type:eq;column:phone;table:users"`            // 手机号
-	CreatedAt  []string `json:"createdAt" form:"createdAt" search:"type:between;column:created_at;table:users"` // 创建时间范围
+	Page      int64    `json:"page" form:"page" search:"page"`                                                 // 分页
+	PageSize  int64    `json:"pageSize" form:"pageSize" search:"pageSize"`                                     // 分页大小
+	ID        uint64   `json:"id" form:"id" search:"type:eq;column:id;table:users"`                            // ID精确匹配
+	Username  string   `json:"username" form:"username" search:"type:like;column:username;table:users"`        // 用户名模糊查询
+	Status    int      `json:"status" form:"status" search:"type:eq;column:status;table:users"`                // 状态
+	Email     string   `json:"email" form:"email" search:"type:eq;column:email;table:users"`                   // 邮箱
+	Phone     string   `json:"phone" form:"phone" search:"type:eq;column:phone;table:users"`                   // 手机号
+	CreatedAt []string `json:"createdAt" form:"createdAt" search:"type:between;column:created_at;table:users"` // 创建时间范围
 }
 
 // ListUserResponse 用户列表响应
 type ListUserResponse struct {
-	Page     int64      `json:"page" comment:"页数"`
-	PageSize int64      `json:"pageSize" comment:"每页数量"`
-	Total    int64      `json:"total" comment:"总条数"`
+	Page     int64       `json:"page" comment:"页数"`
+	PageSize int64       `json:"pageSize" comment:"每页数量"`
+	Total    int64       `json:"total" comment:"总条数"`
 	List     []*UserInfo `json:"list" comment:"数据"`
 }
 

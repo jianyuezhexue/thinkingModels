@@ -27,7 +27,6 @@ export namespace ThinkingModelApi {
     categoryId: number;
     price: number;
     isFree: boolean;
-    overview: string;
     difficulty: number;
     estimatedTime: number;
     status: number;
@@ -45,6 +44,8 @@ export namespace ThinkingModelApi {
   /** 思维模型详情 */
   export interface ModelDetail extends ModelInfo {
     content: string;
+    usageGuide: string;  // 使用指南（JSON 字符串）
+    examples: string;    // 案例（JSON 字符串）
   }
 
   /** 创建模型参数 */
@@ -57,7 +58,9 @@ export namespace ThinkingModelApi {
     categoryId: number;
     price?: number;
     content?: string;
-    overview?: string;
+    usageGuide?: string;   // 使用指南（操作步骤）
+    examples?: string;     // 案例
+    tags?: string;         // 标签(逗号分隔)
     difficulty?: number;
     estimatedTime?: number;
     version?: string;
@@ -76,7 +79,9 @@ export namespace ThinkingModelApi {
     categoryId: number;
     price?: number;
     content?: string;
-    overview?: string;
+    usageGuide?: string;   // 使用指南（操作步骤）
+    examples?: string;     // 案例
+    tags?: string;         // 标签(逗号分隔)
     difficulty?: number;
     estimatedTime?: number;
     version?: string;

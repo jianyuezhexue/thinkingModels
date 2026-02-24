@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"thinkingModels/domain/thinkingModel/model"
@@ -47,7 +48,8 @@ func (l *ModelLogic) Create(req *model.CreateModel) (*model.ModelInfo, error) {
 				concreteEntity.AuthorId = id
 			}
 		}
-		if name, ok := currUserName.(string); ok {
+		// 只有当 currUserName 有值时才覆盖，否则保留 DTO 中传入的 authorName
+		if name, ok := currUserName.(string); ok && name != "" {
 			concreteEntity.AuthorName = name
 		}
 	}
@@ -275,11 +277,21 @@ func convertToModelInfo(entity any) *model.ModelInfo {
 	if !ok {
 		return nil
 	}
+
+	// 处理 tags：从逗号分隔字符串转换为数组
+	var tags []string
+	if e.Tags != "" {
+		for _, tag := range strings.Split(e.Tags, ",") {
+			if trimmed := strings.TrimSpace(tag); trimmed != "" {
+				tags = append(tags, trimmed)
+			}
+		}
+	}
+
 	return &model.ModelInfo{
 		Id:            e.Id,
 		Name:          e.Name,
 		Description:   e.Description,
-		Overview:      e.Overview,
 		Icon:          e.Icon,
 		CoverImage:    e.CoverImage,
 		VideoUrl:      e.VideoUrl,
@@ -301,6 +313,7 @@ func convertToModelInfo(entity any) *model.ModelInfo {
 			LikeCount:    int(e.LikeCount),
 			CommentCount: int(e.CommentCount),
 		},
+		Tags:         tags,
 		ReviewNote:   e.ReviewNote,
 		ReviewerName: e.ReviewerName,
 		CreatedAt:    e.CreatedAt.String(),
@@ -318,8 +331,10 @@ func convertToModelDetail(entity any) *model.ModelDetail {
 		return nil
 	}
 	return &model.ModelDetail{
-		ModelInfo: *info,
-		Content:   e.Content,
+		ModelInfo:  *info,
+		Content:    e.Content,
+		UsageGuide: e.UsageGuide,
+		Examples:   e.Examples,
 	}
 }
 

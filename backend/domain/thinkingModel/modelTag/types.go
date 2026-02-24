@@ -1,22 +1,22 @@
 package modelTag
 
-// ==================== 请求DTO ====================
+// ==================== 请求REQ ====================
 
 // AddTagsToModelRequest 为模型添加标签请求
 type AddTagsToModelRequest struct {
-	ModelId uint64    `json:"modelId" binding:"required"` // 模型ID
+	ModelId uint64    `json:"modelId" binding:"required"`    // 模型ID
 	Tags    []TagItem `json:"tags" binding:"required,min=1"` // 标签列表
 }
 
 // TagItem 标签项
 type TagItem struct {
-	TagId   uint64 `json:"tagId"`            // 标签ID（来自 master 领域公共 tag）
+	TagId   uint64 `json:"tagId"`                      // 标签ID（来自 master 领域公共 tag）
 	TagName string `json:"tagName" binding:"required"` // 标签名称
 }
 
 // RemoveTagsFromModelRequest 从模型移除标签请求
 type RemoveTagsFromModelRequest struct {
-	ModelId uint64   `json:"modelId" binding:"required"` // 模型ID
+	ModelId uint64   `json:"modelId" binding:"required"`      // 模型ID
 	TagIds  []uint64 `json:"tagIds" binding:"required,min=1"` // 标签ID列表
 }
 
@@ -36,19 +36,19 @@ type DelModelTag struct {
 
 // IncreaseHeatRequest 增加热度请求
 type IncreaseHeatRequest struct {
-	Id    uint64 `json:"id" binding:"required"`        // 模型标签ID
+	Id    uint64 `json:"id" binding:"required"`          // 模型标签ID
 	Delta int    `json:"delta" binding:"required,min=1"` // 增加的热度值
 }
 
-// ==================== 响应DTO ====================
+// ==================== 响应RESP ====================
 
 // TagInfo 标签信息DTO
 type TagInfo struct {
-	Id       uint64 `json:"id"`
-	ModelId  uint64 `json:"modelId"`
-	TagId    uint64 `json:"tagId"`
-	TagName  string `json:"tagName"`
-	Heat     int    `json:"heat"`
+	Id        uint64 `json:"id"`
+	ModelId   uint64 `json:"modelId"`
+	TagId     uint64 `json:"tagId"`
+	TagName   string `json:"tagName"`
+	Heat      int    `json:"heat"`
 	CreatedAt string `json:"createdAt"`
 }
 

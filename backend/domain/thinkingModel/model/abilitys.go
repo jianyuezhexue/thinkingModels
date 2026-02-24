@@ -117,7 +117,6 @@ func (m *ModelEntity) Fork() ModelEntityInterface {
 	newEntity := &ModelEntity{
 		Name:          m.Name + " (派生)",
 		Description:   m.Description,
-		Overview:      m.Overview,
 		Icon:          m.Icon,
 		CategoryId:    m.CategoryId,
 		Content:       m.Content,

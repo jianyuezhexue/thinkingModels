@@ -30,7 +30,6 @@ type ModelEntity struct {
 	base.BaseModel[ModelEntity]
 	Name          string  `json:"name" type:"db" comment:"模型名称"`
 	Description   string  `json:"description" type:"db" comment:"简短描述"`
-	Overview      string  `json:"overview" type:"db" comment:"概述"`
 	Icon          string  `json:"icon" type:"db" comment:"图标"`
 	CoverImage    string  `json:"coverImage" type:"db" gorm:"column:cover_image" comment:"封面图片"`
 	VideoUrl      string  `json:"videoUrl" type:"db" gorm:"column:video_url" comment:"视频地址"`
@@ -47,6 +46,7 @@ type ModelEntity struct {
 	IsOfficial    bool    `json:"isOfficial" type:"db" comment:"是否官方"`
 	AuthorId      uint64  `json:"authorId" type:"db" comment:"作者ID"`
 	AuthorName    string  `json:"authorName" type:"db" comment:"作者名称"`
+	Tags          string  `json:"tags" type:"db" comment:"标签(逗号分隔)"`
 	SourceModelId uint64  `json:"sourceModelId" type:"db" comment:"派生来源ID"`
 	UsageCount    int64   `json:"usageCount" type:"db" comment:"使用次数"`
 	AdoptCount    int64   `json:"adoptCount" type:"db" comment:"采纳次数"`

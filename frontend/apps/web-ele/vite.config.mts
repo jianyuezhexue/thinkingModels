@@ -14,6 +14,9 @@ export default defineConfig(async () => {
       server: {
         // 前端直接连接后端，不使用代理
       },
+      optimizeDeps: {
+        include: ['marked', 'dompurify'],
+      },
     },
   };
 });
