@@ -35,7 +35,7 @@ services:
 
   # 前端服务 (Vue3 + Vite)
   frontend:
-    image: m.daocloud.io/docker.io/library/node:20-slim
+    image: docker.1ms.run/library/node:20-slim
     container_name: thinking-models-frontend
     restart: unless-stopped
     environment:
